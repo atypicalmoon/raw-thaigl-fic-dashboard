@@ -1181,7 +1181,8 @@ function drawCpBar(rows) {
 
     const svg = d3.select("#cpBarChart");
     const width = Math.max(svg.node().parentElement.clientWidth - 8, 320);
-    const height = 360;
+    const compactChart = width <= 520;
+    const height = compactChart ? 310 : 330;
     svg.attr("width", width).attr("height", height);
     svg.selectAll("*").remove();
     cpBarG = null;
@@ -1192,8 +1193,7 @@ function drawCpBar(rows) {
         return;
     }
 
-    const compactChart = width <= 520;
-    const margin = { top: compactChart ? 30 : 22, right: 28, bottom: 52, left: compactChart ? 42 : 62 };
+    const margin = { top: 18, right: 22, bottom: compactChart ? 34 : 38, left: compactChart ? 38 : 46 };
     const x = d3.scaleSqrt().domain([0, d3.max(data, d => d.count) || 1]).nice().range([margin.left, width - margin.right]);
     const yMax = d3.max(data, d => d.p90) || 1;
     const y = d3.scaleLinear().domain([0, yMax * 1.08]).nice().range([height - margin.bottom, margin.top]);
