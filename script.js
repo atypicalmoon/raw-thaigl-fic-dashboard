@@ -103,6 +103,7 @@ let dataAfterStatus = [];
 let baseOkArticleCount = 0;
 let cpColor = null;
 let selectedFocusCp = "";
+let focusCpChoices = [];
 let tableSearchQuery = "";
 let tableSortMode = "likes_desc";
 let dedupInfo = { totalRows: 0, uniqueRows: 0 };
@@ -455,6 +456,39 @@ function openDiscoveryCp(cp) {
     setFocusCP(cp);
 }
 
+function renderFocusCpOptions() {
+    const container = document.getElementById("focusCpOptions");
+    const query = document.getElementById("focusCpSearch").value.trim().toLowerCase();
+    const matches = focusCpChoices.filter(cp => cp.toLowerCase().includes(query));
+    container.replaceChildren();
+    if (!matches.length) {
+        const empty = document.createElement("div");
+        empty.className = "focus-cp-empty";
+        empty.textContent = "没有匹配的 CP";
+        container.appendChild(empty);
+        return;
+    }
+    matches.forEach(cp => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "focus-cp-option";
+        option.setAttribute("role", "option");
+        option.textContent = cp;
+        option.onclick = () => {
+            setFocusCpOptionsOpen(false);
+            openDiscoveryCp(cp);
+        };
+        container.appendChild(option);
+    });
+}
+
+function setFocusCpOptionsOpen(open) {
+    const options = document.getElementById("focusCpOptions");
+    options.hidden = !open;
+    document.getElementById("focusCpSearch").setAttribute("aria-expanded", String(open));
+    if (open) renderFocusCpOptions();
+}
+
 function launchLenaMiuEasterEgg(cp) {
     const layer = document.getElementById("lenamiuEasterEgg");
     layer.replaceChildren();
@@ -579,16 +613,33 @@ function bindEvents() {
     document.addEventListener("click", e => { if (!dataInfo.contains(e.target)) setDataInfoOpen(false); });
     document.addEventListener("keydown", e => { if (e.key === "Escape") setDataInfoOpen(false); });
 
+    const focusCpSearch = document.getElementById("focusCpSearch");
     const resolveFocusCp = () => {
-        const query = document.getElementById("focusCpSearch").value.trim().toLowerCase();
+        const query = focusCpSearch.value.trim().toLowerCase();
         if (!query) return;
-        const choices = cpColor.domain();
-        const match = choices.find(cp => cp.toLowerCase() === query) || choices.find(cp => cp.toLowerCase().includes(query));
-        if (match) openDiscoveryCp(match);
+        const match = focusCpChoices.find(cp => cp.toLowerCase() === query) || focusCpChoices.find(cp => cp.toLowerCase().includes(query));
+        if (match) {
+            setFocusCpOptionsOpen(false);
+            openDiscoveryCp(match);
+        }
     };
-    document.getElementById("focusCpSearch").onchange = resolveFocusCp;
-    document.getElementById("focusCpSearch").onkeydown = e => { if (e.key === "Enter") resolveFocusCp(); };
-    document.getElementById("clearFocusCpBtn").onclick = () => setFocusCP("");
+    focusCpSearch.onfocus = () => setFocusCpOptionsOpen(true);
+    focusCpSearch.oninput = () => setFocusCpOptionsOpen(true);
+    focusCpSearch.onkeydown = e => {
+        if (e.key === "Enter") resolveFocusCp();
+        if (e.key === "Escape") setFocusCpOptionsOpen(false);
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            document.querySelector("#focusCpOptions .focus-cp-option")?.focus();
+        }
+    };
+    document.getElementById("focusCpArrow").onclick = () => setFocusCpOptionsOpen(document.getElementById("focusCpOptions").hidden);
+    document.addEventListener("click", e => { if (!e.target.closest(".focus-combobox")) setFocusCpOptionsOpen(false); });
+    document.getElementById("clearFocusCpBtn").onclick = () => {
+        setFocusCP("");
+        focusCpSearch.focus();
+        setFocusCpOptionsOpen(true);
+    };
     const focusHeader = document.getElementById("focusHeader");
     focusHeader.onclick = event => {
         if (event.target.closest("input, button, select, option")) return;
@@ -602,7 +653,10 @@ function bindEvents() {
     };
     document.getElementById("randomCpBtn").onclick = () => {
         const choices = Array.from(state.cps);
-        if (choices.length) openDiscoveryCp(choices[Math.floor(Math.random() * choices.length)]);
+        if (choices.length) {
+            setFocusCpOptionsOpen(false);
+            openDiscoveryCp(choices[Math.floor(Math.random() * choices.length)]);
+        }
     };
 
     document.getElementById("cpSearchInput").oninput = function(e) {
@@ -819,14 +873,14 @@ function update() {
 }
 
 function syncFocusSelectAndDraw(rows) {
-    const options = d3.select("#focusCpOptions").html("");
     const availableCps = Array.from(state.cps).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+    focusCpChoices = availableCps;
     if (!availableCps.length) {
         document.getElementById("focusCpSearch").value = ""; selectedFocusCp = ""; drawFocusArea(rows); return;
     }
-    availableCps.forEach(cp => options.append("option").attr("value", cp));
     if (selectedFocusCp && !state.cps.has(selectedFocusCp)) selectedFocusCp = "";
     document.getElementById("focusCpSearch").value = selectedFocusCp;
+    if (!document.getElementById("focusCpOptions").hidden) renderFocusCpOptions();
     drawFocusArea(rows);
 }
 

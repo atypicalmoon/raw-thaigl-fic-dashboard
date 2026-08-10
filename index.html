@@ -18,7 +18,7 @@
     <meta name="description" content="ReadAWrite 泰百 CP 同人作品数据看板。" />
     <title>泰百同人数据看板</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=20260810125022" />
+    <link rel="stylesheet" href="style.css?v=20260810125401" />
 </head>
 <body>
     <header class="site-header">
@@ -72,7 +72,7 @@
             <section id="focus" class="focus-section">
                 <div class="section-heading"><div><span class="section-kicker">CP DETAIL</span><h2>单 CP 数据</h2></div></div>
                 <article class="focus-card" id="focusCard">
-                    <div class="focus-header" id="focusHeader"><div class="lenamiu-easter-egg" id="lenamiuEasterEgg" aria-hidden="true"></div><div><span class="focus-overline">SELECTED CP</span><div class="focus-title-line"><h3 id="currentFocusCpLabel">选择一对 CP</h3></div><p>点赞数据与作品列表</p></div><div class="focus-picker"><span>搜索并切换 CP</span><div class="focus-picker-row"><input id="focusCpSearch" class="search-input" list="focusCpOptions" placeholder="输入 CP 名称…" autocomplete="off" /><datalist id="focusCpOptions"></datalist><button class="focus-tool-button" id="clearFocusCpBtn" type="button">清空</button><button class="focus-tool-button random" id="randomCpBtn" type="button">随机 CP</button></div></div></div>
+                    <div class="focus-header" id="focusHeader"><div class="lenamiu-easter-egg" id="lenamiuEasterEgg" aria-hidden="true"></div><div><span class="focus-overline">SELECTED CP</span><div class="focus-title-line"><h3 id="currentFocusCpLabel">选择一对 CP</h3></div><p>点赞数据与作品列表</p></div><div class="focus-picker"><span>搜索并切换 CP</span><div class="focus-picker-row"><div class="focus-combobox"><input id="focusCpSearch" class="search-input" placeholder="输入 CP 名称…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="focusCpOptions" /><button id="focusCpArrow" type="button" aria-label="展开 CP 列表">⌄</button><div id="focusCpOptions" class="focus-cp-options" role="listbox" hidden></div></div><button class="focus-tool-button" id="clearFocusCpBtn" type="button">清空</button><button class="focus-tool-button random" id="randomCpBtn" type="button">随机 CP</button></div></div></div>
                     <div class="focus-stats" id="focusStats"><div><span>收录作品</span><strong id="focusArticleTotal">—</strong></div><div><span>完结率</span><strong id="focusCompletionRate">—</strong></div><div><span>1000+ 作品</span><strong id="focusHighLikeRate">—</strong></div><div><span>最活跃月份</span><strong id="focusPeakMonth">—</strong></div></div>
                     <div class="table-toolbar"><div class="table-title"><strong>作品清单</strong><span id="articleCountBadge">共 0 篇</span><select id="tableSortSelect" aria-label="作品排序方式"><option value="likes_desc">点赞从高到低</option><option value="date_desc">发布日期从新到旧</option><option value="views_desc">阅读量从高到低</option><option value="title_asc">标题名称排序</option></select></div><input type="text" id="tableFilterInput" class="table-search-input" placeholder="搜索标题 / 作者…" /></div>
                     <div class="article-table-wrap"><table class="article-table"><thead><tr><th>文章标题</th><th>作者</th><th>发布日期</th><th class="number">点赞</th><th class="number">阅读</th><th class="center">状态</th></tr></thead><tbody id="articleTableBody"></tbody></table></div>
@@ -98,7 +98,7 @@
         </article>
     </div>
     <div class="tooltip" id="tooltip"></div>
-    <script src="cp_catalog.js?v=20260810125022"></script>
-    <script src="script.js?v=20260810125022"></script>
+    <script src="cp_catalog.js?v=20260810125401"></script>
+    <script src="script.js?v=20260810125401"></script>
 </body>
 </html>
