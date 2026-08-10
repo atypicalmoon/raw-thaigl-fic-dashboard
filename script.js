@@ -1163,7 +1163,7 @@ function drawCpBar(rows) {
         .on("mouseenter", (e, d) => setProfileHighlight(d.cp))
         .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => activateChartCp(e, d.cp, setProfileHighlight, `<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`))
         .on("keydown", (e, d) => { if (e.key === "Enter" || e.key === " ") setFocusCP(d.cp); });
-    points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("fill-opacity", .8).attr("stroke", "#fff").attr("stroke-width", 1.5);
+    points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("stroke", "#fff").attr("stroke-width", 1.5);
     const legend = d3.select("#cpProfileLegend").html("").attr("class", "chart-legend");
     data.forEach(d => {
         const item = legend.append("button").attr("type", "button").attr("class", "chart-legend-button").attr("data-cp", d.cp)
