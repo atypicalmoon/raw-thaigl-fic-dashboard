@@ -349,19 +349,12 @@ function initDashboard() {
     renderCpCheckboxes();
     renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
-    renderCpCatalog();
 
     document.getElementById("filterPanel").style.display = "block";
     document.getElementById("dashboardGrid").style.display = "block";
 
     bindEvents();
     update();
-}
-
-function renderCpCatalog() {
-    const counts = d3.rollup(dataAfterStatus.filter(d => d.year), v => v.length, d => d.cp);
-    const zeroCount = cpColor.domain().filter(cp => !(counts.get(cp) || 0)).length;
-    document.getElementById("catalogSummary").innerText = `收录范围：${companyToCps.size} 家公司 / 厂牌，预设收录 ${cpColor.domain().length} 个 CP，其中 ${zeroCount} 个目前暂无符合条件的作品。`;
 }
 
 function renderCpCheckboxes() {
