@@ -111,6 +111,9 @@ let tableVisibleCount = getTablePageSize();
 let currentFocusArticles = [];
 const focusStatsCache = new Map();
 let updateTimer = null;
+const heatmapHiddenCps = new Set();
+let heatmapCpChoices = [];
+let heatmapVisibilityTimer = null;
 let dedupInfo = { totalRows: 0, uniqueRows: 0 };
 let companyToCps = new Map();
 let cpToCompany = new Map();
@@ -794,6 +797,26 @@ function bindEvents() {
     document.getElementById("heatmapRangeSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("heatmapSortSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("heatmapTopNSelect").onchange = () => drawHeatmap(getFilteredRows());
+    const heatmapCpPanel = document.getElementById("heatmapCpPanel");
+    const heatmapCpToggle = document.getElementById("heatmapCpToggle");
+    heatmapCpToggle.onclick = () => {
+        heatmapCpPanel.hidden = !heatmapCpPanel.hidden;
+        heatmapCpToggle.setAttribute("aria-expanded", String(!heatmapCpPanel.hidden));
+        if (!heatmapCpPanel.hidden) renderHeatmapCpChecks();
+    };
+    document.getElementById("heatmapCpChecks").onchange = event => {
+        if (!event.target.matches('input[type="checkbox"]')) return;
+        if (event.target.checked) heatmapHiddenCps.delete(event.target.value);
+        else heatmapHiddenCps.add(event.target.value);
+        document.getElementById("heatmapHiddenCount").innerText = `已隐藏 ${heatmapHiddenCps.size} 个`;
+        clearTimeout(heatmapVisibilityTimer);
+        heatmapVisibilityTimer = setTimeout(() => drawHeatmap(getFilteredRows()), 120);
+    };
+    document.getElementById("heatmapRestoreAll").onclick = () => {
+        heatmapHiddenCps.clear();
+        renderHeatmapCpChecks();
+        drawHeatmap(getFilteredRows());
+    };
     document.getElementById("growthTopNSelect").onchange = () => drawGrowthChart(getFilteredRows());
     document.getElementById("cpBarTopNSelect").onchange = () => drawCpBar(getFilteredRows());
     document.getElementById("likesTopNSelect").onchange = () => drawLikesChart(getFilteredRows());
@@ -1236,20 +1259,32 @@ function setLikesHighlight(cp) {
         .style("opacity", function() { return !cp || this.getAttribute("data-cp") === cp ? 1 : .3; });
 }
 
+function renderHeatmapCpChecks() {
+    const container = d3.select("#heatmapCpChecks").html("");
+    heatmapCpChoices.forEach(cp => {
+        const label = container.append("label").attr("class", "checkbox-item");
+        label.append("input").attr("type", "checkbox").attr("value", cp).property("checked", !heatmapHiddenCps.has(cp));
+        label.append("span").text(cp);
+    });
+    const hiddenCount = heatmapCpChoices.filter(cp => heatmapHiddenCps.has(cp)).length;
+    document.getElementById("heatmapHiddenCount").innerText = `已隐藏 ${hiddenCount} 个`;
+}
+
 function drawHeatmap(rows) {
     const metric = document.getElementById("metricSelect").value;
     const rangeRaw = document.getElementById("heatmapRangeSelect").value;
     const sortMode = document.getElementById("heatmapSortSelect").value;
     const topNRaw = document.getElementById("heatmapTopNSelect").value;
     const allValid = rows.filter(d => d.month_year);
-    const allCps = Array.from(state.cps).filter(c => cpColor.domain().includes(c));
+    const selectableCps = Array.from(state.cps).filter(c => cpColor.domain().includes(c));
+    const allCps = selectableCps.filter(cp => !heatmapHiddenCps.has(cp));
     const allMonths = continuousMonths(allValid);
     const months = rangeRaw === "all" ? allMonths : allMonths.slice(-Math.max(1, +rangeRaw));
     const visibleMonths = new Set(months);
     const valid = allValid.filter(d => visibleMonths.has(d.month_year));
     const container = d3.select("#heatmapContainer").html("");
 
-    if (!months.length || !allCps.length) {
+    if (!months.length || !selectableCps.length) {
         container.append("div").style("color", "var(--text-sub)").style("padding", "30px 0").style("text-align", "center").text("暂无匹配数据");
         d3.select("#heatmapLegend").html(""); return;
     }
@@ -1263,7 +1298,7 @@ function drawHeatmap(rows) {
     });
 
     const cpTotal = new Map();
-    allCps.forEach(cp => cpTotal.set(cp, 0));
+    selectableCps.forEach(cp => cpTotal.set(cp, 0));
     agg.forEach((o, key) => {
         const cp = key.slice(0, key.lastIndexOf("|"));
         if (cpTotal.has(cp)) cpTotal.set(cp, cpTotal.get(cp) + o[metric]);
@@ -1274,6 +1309,15 @@ function drawHeatmap(rows) {
     else sortedCps.sort((a, b) => (cpTotal.get(b) || 0) - (cpTotal.get(a) || 0));
 
     if (topNRaw !== "all" && sortedCps.length > +topNRaw) sortedCps = sortedCps.slice(0, +topNRaw);
+    const hiddenInScope = selectableCps.filter(cp => heatmapHiddenCps.has(cp));
+    if (sortMode === "alpha") hiddenInScope.sort((a, b) => a.localeCompare(b));
+    else hiddenInScope.sort((a, b) => (cpTotal.get(b) || 0) - (cpTotal.get(a) || 0));
+    heatmapCpChoices = [...sortedCps, ...hiddenInScope];
+    if (!document.getElementById("heatmapCpPanel").hidden) renderHeatmapCpChecks();
+    if (!sortedCps.length) {
+        container.append("div").style("color", "var(--text-sub)").style("padding", "30px 0").style("text-align", "center").text("当前 CP 均已隐藏，可在“调整 CP”中恢复");
+        d3.select("#heatmapLegend").html(""); return;
+    }
 
     const cellW = 28, cellH = 28, headerH = 20, footerH = 68;
     const leftPad = 10, rightPad = 64;
