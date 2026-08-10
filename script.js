@@ -779,6 +779,13 @@ function bindEvents() {
         tableVisibleCount = getTablePageSize();
         renderFocusTable(currentFocusArticles);
     };
+    document.getElementById("clearTableSearchBtn").onclick = () => {
+        tableSearchQuery = "";
+        document.getElementById("tableFilterInput").value = "";
+        tableVisibleCount = getTablePageSize();
+        renderFocusTable(currentFocusArticles);
+        document.getElementById("tableFilterInput").focus();
+    };
     document.getElementById("loadMoreArticlesBtn").onclick = () => {
         tableVisibleCount += getTablePageSize();
         renderFocusTable(currentFocusArticles);
