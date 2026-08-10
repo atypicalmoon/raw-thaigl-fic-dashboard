@@ -106,6 +106,7 @@ let selectedFocusCp = "";
 let focusCpChoices = [];
 let tableSearchQuery = "";
 let tableSortMode = "likes_desc";
+let tableStatusMode = "all";
 const getTablePageSize = () => window.innerWidth <= 720 ? 30 : 50;
 let tableVisibleCount = getTablePageSize();
 let currentFocusArticles = [];
@@ -782,6 +783,11 @@ function bindEvents() {
         tableVisibleCount = getTablePageSize();
         renderFocusTable(currentFocusArticles);
     };
+    document.getElementById("tableStatusSelect").onchange = function() {
+        tableStatusMode = this.value;
+        tableVisibleCount = getTablePageSize();
+        renderFocusTable(currentFocusArticles);
+    };
     document.getElementById("clearTableSearchBtn").onclick = () => {
         tableSearchQuery = "";
         document.getElementById("tableFilterInput").value = "";
@@ -833,10 +839,12 @@ function bindEvents() {
         state.customLikeMin = null; state.customLikeMax = null;
         tableSearchQuery = "";
         tableSortMode = "likes_desc";
+        tableStatusMode = "all";
         document.getElementById("includeReviewToggle").checked = false;
         document.getElementById("cpSearchInput").value = "";
         document.getElementById("tableFilterInput").value = "";
         document.getElementById("tableSortSelect").value = tableSortMode;
+        document.getElementById("tableStatusSelect").value = tableStatusMode;
         document.getElementById("customLikeMin").value = "";
         document.getElementById("customLikeMax").value = "";
         applyStatusFilter();
@@ -1437,6 +1445,8 @@ function renderFocusTable(cpArticles) {
         document.getElementById("articleCountBadge").innerText = `共 0 篇`; return;
     }
     let filtered = [...cpArticles];
+    if (tableStatusMode === "ended") filtered = filtered.filter(d => d.is_end);
+    if (tableStatusMode === "ongoing") filtered = filtered.filter(d => !d.is_end);
     if (tableSearchQuery) {
         filtered = filtered.filter(d => (d.title && d.title.toLowerCase().includes(tableSearchQuery)) || (d.author && d.author.toLowerCase().includes(tableSearchQuery)));
     }
