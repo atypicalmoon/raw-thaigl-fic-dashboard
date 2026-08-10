@@ -106,6 +106,11 @@ let selectedFocusCp = "";
 let focusCpChoices = [];
 let tableSearchQuery = "";
 let tableSortMode = "likes_desc";
+const TABLE_PAGE_SIZE = 50;
+let tableVisibleCount = TABLE_PAGE_SIZE;
+let currentFocusArticles = [];
+const focusStatsCache = new Map();
+let updateTimer = null;
 let dedupInfo = { totalRows: 0, uniqueRows: 0 };
 let companyToCps = new Map();
 let cpToCompany = new Map();
@@ -766,11 +771,17 @@ function bindEvents() {
 
     document.getElementById("tableFilterInput").oninput = function(e) {
         tableSearchQuery = e.target.value.trim().toLowerCase();
-        renderFocusTable(getFilteredRows().filter(d => d.cp === selectedFocusCp));
+        tableVisibleCount = TABLE_PAGE_SIZE;
+        renderFocusTable(currentFocusArticles);
     };
     document.getElementById("tableSortSelect").onchange = function() {
         tableSortMode = this.value;
-        renderFocusTable(getFilteredRows().filter(d => d.cp === selectedFocusCp));
+        tableVisibleCount = TABLE_PAGE_SIZE;
+        renderFocusTable(currentFocusArticles);
+    };
+    document.getElementById("loadMoreArticlesBtn").onclick = () => {
+        tableVisibleCount += TABLE_PAGE_SIZE;
+        renderFocusTable(currentFocusArticles);
     };
     document.getElementById("metricSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("heatmapSortSelect").onchange = () => drawHeatmap(getFilteredRows());
@@ -863,6 +874,11 @@ function updateKPIs(rows) {
 }
 
 function update() {
+    clearTimeout(updateTimer);
+    updateTimer = setTimeout(updateNow, 180);
+}
+
+function updateNow() {
     const rows = getFilteredRows();
     updateKPIs(rows);
     drawCpBar(rows);
@@ -1333,32 +1349,48 @@ function drawFocusArea(rows) {
     }
 
     const cpArticles = rows.filter(d => d.cp === selectedFocusCp);
+    currentFocusArticles = cpArticles;
+    tableVisibleCount = TABLE_PAGE_SIZE;
     renderFocusTable(cpArticles);
 
     document.getElementById("currentFocusCpLabel").innerText = selectedFocusCp;
-    const completionRate = cpArticles.length ? cpArticles.filter(d => d.is_end).length / cpArticles.length * 100 : 0;
-    const highCount = cpArticles.filter(d => d.likes >= 1000).length;
-    const highRate = cpArticles.length ? (highCount / cpArticles.length * 100).toFixed(1) : "0.0";
-    const monthCounts = d3.rollup(cpArticles.filter(d => d.month_year), v => v.length, d => d.month_year);
-    const peakMonth = Array.from(monthCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    const cacheKey = `${selectedFocusCp}|${Array.from(state.companies).sort().join(",")}|${Array.from(state.cps).sort().join(",")}|${Array.from(state.years).sort().join(",")}|${Array.from(state.tiers).sort().join(",")}|${state.customLikeMin ?? ""}|${state.customLikeMax ?? ""}|${state.includeReview}`;
+    let stats = focusStatsCache.get(cacheKey);
+    if (!stats) {
+        const completionRate = cpArticles.length ? cpArticles.filter(d => d.is_end).length / cpArticles.length * 100 : 0;
+        const highCount = cpArticles.filter(d => d.likes >= 1000).length;
+        const highRate = cpArticles.length ? (highCount / cpArticles.length * 100).toFixed(1) : "0.0";
+        const monthCounts = d3.rollup(cpArticles.filter(d => d.month_year), v => v.length, d => d.month_year);
+        const peakMonth = Array.from(monthCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+        stats = { completionRate, highRate, peakMonth: peakMonth ? peakMonth[0] : "无有效日期" };
+        if (focusStatsCache.size >= 200) focusStatsCache.clear();
+        focusStatsCache.set(cacheKey, stats);
+    }
     document.getElementById("focusArticleTotal").innerText = cpArticles.length.toLocaleString();
-    document.getElementById("focusCompletionRate").innerText = `${completionRate.toFixed(1)}%`;
-    document.getElementById("focusHighLikeRate").innerText = `${highRate}%`;
-    document.getElementById("focusPeakMonth").innerText = peakMonth ? peakMonth[0] : "无有效日期";
+    document.getElementById("focusCompletionRate").innerText = `${stats.completionRate.toFixed(1)}%`;
+    document.getElementById("focusHighLikeRate").innerText = `${stats.highRate}%`;
+    document.getElementById("focusPeakMonth").innerText = stats.peakMonth;
 }
 
 function renderFocusTable(cpArticles) {
     const tbody = d3.select("#articleTableBody");
     tbody.selectAll("*").remove();
     if (!selectedFocusCp) {
+        currentFocusArticles = [];
+        document.getElementById("loadMoreArticlesBtn").hidden = true;
         document.getElementById("articleCountBadge").innerText = `共 0 篇`; return;
     }
     let filtered = [...cpArticles];
     if (tableSearchQuery) {
         filtered = filtered.filter(d => (d.title && d.title.toLowerCase().includes(tableSearchQuery)) || (d.author && d.author.toLowerCase().includes(tableSearchQuery)));
     }
-    document.getElementById("articleCountBadge").innerText = `展示 ${filtered.length} / ${cpArticles.length} 篇`;
+    const visible = filtered.slice(0, tableVisibleCount);
+    document.getElementById("articleCountBadge").innerText = `展示 ${Math.min(tableVisibleCount, filtered.length)} / ${filtered.length} 篇`;
+    const loadMoreButton = document.getElementById("loadMoreArticlesBtn");
+    loadMoreButton.hidden = visible.length >= filtered.length;
+    loadMoreButton.innerText = `加载更多（剩余 ${(filtered.length - visible.length).toLocaleString()} 篇）`;
     if (!filtered.length) {
+        document.getElementById("loadMoreArticlesBtn").hidden = true;
         tbody.append("tr").append("td").attr("colspan", 6).style("text-align", "center").style("color", "var(--text-sub)").style("padding", "20px 0").text("无匹配作品"); return;
     }
     const sorters = {
@@ -1367,7 +1399,7 @@ function renderFocusTable(cpArticles) {
         views_desc: (a, b) => b.view_count - a.view_count,
         title_asc: (a, b) => a.title.localeCompare(b.title)
     };
-    filtered.sort(sorters[tableSortMode] || sorters.likes_desc).forEach(d => {
+    filtered.sort(sorters[tableSortMode] || sorters.likes_desc).slice(0, tableVisibleCount).forEach(d => {
         const tr = tbody.append("tr");
         const linkTd = tr.append("td").attr("class", "title-cell");
         if (d.url && d.url !== "#") linkTd.append("a").attr("href", d.url).attr("target", "_blank").attr("rel", "noopener noreferrer").attr("title", d.title).text(d.title);
