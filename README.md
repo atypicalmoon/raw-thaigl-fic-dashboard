@@ -37,32 +37,6 @@ ReadAWrite 的标题、简介和 Tag 可能被作者后续修改，作品也可�
 
 图表颜色仅用于区分数据，不代表官方应援色、排名或任何个人立场。
 
-## 本地预览
-
-直接以 `file://` 打开页面时，浏览器可能阻止读取 CSV。建议在仓库目录启动一个简单的本地服务器：
-
-```powershell
-python -m http.server 8000
-```
-
-然后访问：
-
-```text
-http://localhost:8000
-```
-
-页面读取同目录下的 `articles_cleaned.csv`。修改数据文件后，刷新页面即可查看结果。
-
-## 文件说明
-
-```text
-.
-├── index.html              # 页面结构
-├── style.css               # 页面样式与响应式布局
-├── script.js               # 数据处理、图表和交互逻辑
-└── articles_cleaned.csv    # 当前看板使用的静态数据快照
-```
-
 ## 使用说明
 
 欢迎将页面代码用于个人研究、技术交流和非商业改造。
@@ -80,4 +54,3 @@ http://localhost:8000
 ## Credits
 
 Created by **Atypical** · With **Codex**
-
