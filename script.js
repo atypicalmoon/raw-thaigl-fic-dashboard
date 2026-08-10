@@ -163,7 +163,9 @@ function showTooltip(html, event) {
 function hideTooltip() { tooltip.style("opacity", 0); }
 
 window.addEventListener("scroll", hideTooltip, { passive: true });
-document.addEventListener("touchend", () => requestAnimationFrame(hideTooltip), { passive: true });
+document.addEventListener("pointerdown", event => {
+    if (event.pointerType === "touch") hideTooltip();
+}, { passive: true });
 document.addEventListener("pointercancel", hideTooltip, { passive: true });
 
 function likeTier(n) {
