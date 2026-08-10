@@ -1201,9 +1201,6 @@ function drawCpBar(rows) {
     const g = svg.append("g");
     g.append("g").attr("class", "axis").attr("transform", `translate(0,${height-margin.bottom})`).call(d3.axisBottom(x).ticks(5).tickFormat(formatNumber));
     g.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(compactChart ? formatAxisCompact : formatNumber));
-    g.append("text").attr("x", (margin.left + width - margin.right) / 2).attr("y", height - 8).attr("text-anchor", "middle").attr("fill", "var(--text-muted)").attr("font-size", 10).text("作品数量");
-    if (compactChart) g.append("text").attr("x", margin.left).attr("y", 12).attr("fill", "var(--text-muted)").attr("font-size", 10).text("点赞 P90");
-    else g.append("text").attr("transform", "rotate(-90)").attr("x", -(margin.top + height - margin.bottom) / 2).attr("y", 12).attr("text-anchor", "middle").attr("fill", "var(--text-muted)").attr("font-size", 10).text("点赞 P90");
 
     const points = g.selectAll("g.cp-point").data(data, d => d.cp).join("g")
         .attr("class", "cp-point").attr("transform", d => `translate(${x(d.count)},${y(d.p90)})`)
