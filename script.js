@@ -106,8 +106,8 @@ let selectedFocusCp = "";
 let focusCpChoices = [];
 let tableSearchQuery = "";
 let tableSortMode = "likes_desc";
-const TABLE_PAGE_SIZE = 50;
-let tableVisibleCount = TABLE_PAGE_SIZE;
+const getTablePageSize = () => window.innerWidth <= 720 ? 30 : 50;
+let tableVisibleCount = getTablePageSize();
 let currentFocusArticles = [];
 const focusStatsCache = new Map();
 let updateTimer = null;
@@ -771,16 +771,16 @@ function bindEvents() {
 
     document.getElementById("tableFilterInput").oninput = function(e) {
         tableSearchQuery = e.target.value.trim().toLowerCase();
-        tableVisibleCount = TABLE_PAGE_SIZE;
+        tableVisibleCount = getTablePageSize();
         renderFocusTable(currentFocusArticles);
     };
     document.getElementById("tableSortSelect").onchange = function() {
         tableSortMode = this.value;
-        tableVisibleCount = TABLE_PAGE_SIZE;
+        tableVisibleCount = getTablePageSize();
         renderFocusTable(currentFocusArticles);
     };
     document.getElementById("loadMoreArticlesBtn").onclick = () => {
-        tableVisibleCount += TABLE_PAGE_SIZE;
+        tableVisibleCount += getTablePageSize();
         renderFocusTable(currentFocusArticles);
     };
     document.getElementById("metricSelect").onchange = () => drawHeatmap(getFilteredRows());
@@ -1350,7 +1350,7 @@ function drawFocusArea(rows) {
 
     const cpArticles = rows.filter(d => d.cp === selectedFocusCp);
     currentFocusArticles = cpArticles;
-    tableVisibleCount = TABLE_PAGE_SIZE;
+    tableVisibleCount = getTablePageSize();
     renderFocusTable(cpArticles);
 
     document.getElementById("currentFocusCpLabel").innerText = selectedFocusCp;
