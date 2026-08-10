@@ -791,6 +791,7 @@ function bindEvents() {
         renderFocusTable(currentFocusArticles);
     };
     document.getElementById("metricSelect").onchange = () => drawHeatmap(getFilteredRows());
+    document.getElementById("heatmapRangeSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("heatmapSortSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("heatmapTopNSelect").onchange = () => drawHeatmap(getFilteredRows());
     document.getElementById("growthTopNSelect").onchange = () => drawGrowthChart(getFilteredRows());
@@ -1237,11 +1238,15 @@ function setLikesHighlight(cp) {
 
 function drawHeatmap(rows) {
     const metric = document.getElementById("metricSelect").value;
+    const rangeRaw = document.getElementById("heatmapRangeSelect").value;
     const sortMode = document.getElementById("heatmapSortSelect").value;
     const topNRaw = document.getElementById("heatmapTopNSelect").value;
-    const valid = rows.filter(d => d.month_year);
+    const allValid = rows.filter(d => d.month_year);
     const allCps = Array.from(state.cps).filter(c => cpColor.domain().includes(c));
-    const months = continuousMonths(valid);
+    const allMonths = continuousMonths(allValid);
+    const months = rangeRaw === "all" ? allMonths : allMonths.slice(-Math.max(1, +rangeRaw));
+    const visibleMonths = new Set(months);
+    const valid = allValid.filter(d => visibleMonths.has(d.month_year));
     const container = d3.select("#heatmapContainer").html("");
 
     if (!months.length || !allCps.length) {
