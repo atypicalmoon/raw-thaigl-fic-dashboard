@@ -162,6 +162,10 @@ function showTooltip(html, event) {
 
 function hideTooltip() { tooltip.style("opacity", 0); }
 
+window.addEventListener("scroll", hideTooltip, { passive: true });
+document.addEventListener("touchend", () => requestAnimationFrame(hideTooltip), { passive: true });
+document.addEventListener("pointercancel", hideTooltip, { passive: true });
+
 function likeTier(n) {
     for (let i = 0; i < TIER_BINS.length - 1; i++) {
         if (n > TIER_BINS[i] && n <= TIER_BINS[i + 1]) return TIER_ORDER[i];
@@ -408,6 +412,7 @@ function updateCpSelectionByCompany(newlyAddedCompany = null) {
 }
 
 function setFocusCP(cp) {
+    hideTooltip();
     selectedFocusCp = cp || "";
     document.getElementById("focusCpSearch").value = selectedFocusCp;
     const focusHeader = document.getElementById("focusHeader");
