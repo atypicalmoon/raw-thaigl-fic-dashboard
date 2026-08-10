@@ -127,6 +127,7 @@ let state = {
     customLikeMax: null,
 };
 const tooltip = d3.select("#tooltip");
+let legendTapState = { source: "", cp: "" };
 
 function replaceSetContents(targetSet, values) {
     targetSet.clear();
@@ -161,6 +162,18 @@ function showTooltip(html, event) {
 }
 
 function hideTooltip() { tooltip.style("opacity", 0); }
+
+function activateLegend(event, source, cp, highlight, html) {
+    if (legendTapState.source === source && legendTapState.cp === cp) {
+        legendTapState = { source: "", cp: "" };
+        hideTooltip();
+        setFocusCP(cp);
+        return;
+    }
+    legendTapState = { source, cp };
+    highlight(cp);
+    showTooltip(`${html}<br><span style="color:#f3b6cf;font-size:11px;">再次点击图例进入 CP 聚焦</span>`, event);
+}
 
 window.addEventListener("scroll", hideTooltip, { passive: true });
 document.addEventListener("pointerdown", event => {
@@ -415,6 +428,7 @@ function updateCpSelectionByCompany(newlyAddedCompany = null) {
 
 function setFocusCP(cp) {
     hideTooltip();
+    legendTapState = { source: "", cp: "" };
     selectedFocusCp = cp || "";
     document.getElementById("focusCpSearch").value = selectedFocusCp;
     const focusHeader = document.getElementById("focusHeader");
@@ -971,10 +985,11 @@ function drawGrowthChart(rows) {
         );
 
         const shortName = s.cp.length > 10 ? s.cp.slice(0, 9) + '…' : s.cp;
+        const totalCount = d3.sum(s.points, point => point.count);
         legendBox.append("div")
             .attr("class", "growth-legend-row")
             .attr("data-cp", s.cp)
-            .on("click", () => setFocusCP(s.cp))
+            .on("click", event => activateLegend(event, "growth", s.cp, setGrowthHighlight, `<b>${s.cp}</b><br>当前时间范围新增：<b>${totalCount.toLocaleString()}</b> 篇`))
             .on("mouseenter", () => setGrowthHighlight(s.cp))
             .on("mouseleave", () => setGrowthHighlight(null))
             .html(`<span class="growth-legend-swatch" style="background:${cpColor(s.cp)};"></span><span>${shortName}</span>`);
@@ -1045,7 +1060,7 @@ function drawCpBar(rows) {
     const legend = d3.select("#cpProfileLegend").html("").attr("class", "chart-legend");
     data.forEach(d => {
         const item = legend.append("button").attr("type", "button").attr("class", "chart-legend-button").attr("data-cp", d.cp)
-            .on("click", () => setFocusCP(d.cp)).on("mouseenter focus", () => setProfileHighlight(d.cp)).on("mouseleave blur", () => setProfileHighlight(null));
+            .on("click", event => activateLegend(event, "profile", d.cp, setProfileHighlight, `<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`)).on("mouseenter focus", () => setProfileHighlight(d.cp)).on("mouseleave blur", () => setProfileHighlight(null));
         item.append("span").style("background", cpColor(d.cp));
         item.append("b").text(d.cp);
     });
@@ -1128,7 +1143,7 @@ function drawLikesChart(rows) {
     const legendBox = d3.select("#likesLegend").html("").attr("class", "chart-legend");
     rankedCps.forEach(cp => {
         const item = legendBox.append("button").attr("type", "button").attr("class", "chart-legend-button").attr("data-cp", cp)
-            .on("click", () => setFocusCP(cp)).on("mouseenter focus", () => setLikesHighlight(cp)).on("mouseleave blur", () => setLikesHighlight(null));
+            .on("click", event => activateLegend(event, "likes", cp, setLikesHighlight, `<b>${cp}</b><br>当前筛选范围作品：<b>${(cpTotals.get(cp) || 0).toLocaleString()}</b> 篇`)).on("mouseenter focus", () => setLikesHighlight(cp)).on("mouseleave blur", () => setLikesHighlight(null));
         item.append("span").style("background", cpColor(cp));
         item.append("b").text(cp);
     });
