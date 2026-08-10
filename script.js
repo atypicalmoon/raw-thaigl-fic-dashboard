@@ -127,7 +127,6 @@ let state = {
     customLikeMax: null,
 };
 const tooltip = d3.select("#tooltip");
-let legendTapState = { source: "", cp: "" };
 
 function replaceSetContents(targetSet, values) {
     targetSet.clear();
@@ -163,16 +162,22 @@ function showTooltip(html, event) {
 
 function hideTooltip() { tooltip.style("opacity", 0); }
 
-function activateLegend(event, source, cp, highlight, html) {
-    if (legendTapState.source === source && legendTapState.cp === cp) {
-        legendTapState = { source: "", cp: "" };
-        hideTooltip();
+function usesTouchLayout() {
+    return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
+function activateChartCp(event, cp, highlight, html) {
+    if (!usesTouchLayout()) {
         setFocusCP(cp);
         return;
     }
-    legendTapState = { source, cp };
-    highlight(cp);
-    showTooltip(`${html}<br><span style="color:#f3b6cf;font-size:11px;">再次点击图例进入 CP 聚焦</span>`, event);
+    setFocusCP(cp, { scroll: false });
+    if (highlight) highlight(cp);
+    requestAnimationFrame(() => showTooltip(`${html}<br><span style="color:#f3b6cf;font-size:11px;">已预选 ${cp}，向下滑动可查看作品</span>`, event));
+}
+
+function activateLegend(event, source, cp, highlight, html) {
+    activateChartCp(event, cp, highlight, html);
 }
 
 window.addEventListener("scroll", hideTooltip, { passive: true });
@@ -419,9 +424,9 @@ function updateCpSelectionByCompany(newlyAddedCompany = null) {
     renderCpCheckboxes();
 }
 
-function setFocusCP(cp) {
+function setFocusCP(cp, options = {}) {
+    const shouldScroll = options.scroll !== false;
     hideTooltip();
-    legendTapState = { source: "", cp: "" };
     selectedFocusCp = cp || "";
     document.getElementById("focusCpSearch").value = selectedFocusCp;
     const focusHeader = document.getElementById("focusHeader");
@@ -440,7 +445,7 @@ function setFocusCP(cp) {
     easterEggLayer.classList.remove("active");
     easterEggLayer.setAttribute("aria-hidden", "true");
     drawFocusArea(getFilteredRows());
-    if (cp) {
+    if (cp && shouldScroll) {
         document.getElementById("focus").scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
@@ -963,7 +968,7 @@ function drawGrowthChart(rows) {
             .attr("d", lineCp(s.points))
             .on("mouseenter", () => setGrowthHighlight(s.cp))
             .on("mouseleave", () => setGrowthHighlight(null))
-            .on("click", () => setFocusCP(s.cp));
+            .on("click", event => activateChartCp(event, s.cp, setGrowthHighlight, `<b>${s.cp}</b><br>当前时间范围新增：<b>${d3.sum(s.points, point => point.count).toLocaleString()}</b> 篇`));
 
         sGroup.select(".series-dots").selectAll("circle").data(s.points, p => p.month).join(
             enter => enter.append("circle")
@@ -972,7 +977,7 @@ function drawGrowthChart(rows) {
                 .style("cursor", "pointer")
                 .on("mousemove", (e, d) => { setGrowthHighlight(s.cp); showTooltip(`<b>${s.cp}</b><br>${d.month}: 新增 <b>${d.count}</b> 篇<br><span style="color:#60a5fa; font-size:11px;">🎯 点击直接聚焦该 CP</span>`, e); })
                 .on("mouseleave", () => { setGrowthHighlight(null); hideTooltip(); })
-                .on("click", () => setFocusCP(s.cp)),
+                .on("click", (event, d) => activateChartCp(event, s.cp, setGrowthHighlight, `<b>${s.cp}</b><br>${d.month}: 新增 <b>${d.count}</b> 篇`)),
             update => update.attr("cx", d => x(d.month)).attr("cy", d => yCp(d.count)),
             exit => exit.remove()
         );
@@ -1047,7 +1052,7 @@ function drawCpBar(rows) {
         .attr("tabindex", 0).attr("role", "button").style("cursor", "pointer")
         .on("mousemove", (e, d) => showTooltip(`<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`, e))
         .on("mouseenter", (e, d) => setProfileHighlight(d.cp))
-        .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => setFocusCP(d.cp))
+        .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => activateChartCp(e, d.cp, setProfileHighlight, `<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`))
         .on("keydown", (e, d) => { if (e.key === "Enter" || e.key === " ") setFocusCP(d.cp); });
     points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("fill-opacity", .8).attr("stroke", "#fff").attr("stroke-width", 1.5);
     const legend = d3.select("#cpProfileLegend").html("").attr("class", "chart-legend");
@@ -1130,7 +1135,7 @@ function drawLikesChart(rows) {
         })
         .on("mouseenter", function() { setLikesHighlight(d3.select(this.parentNode).datum().key); })
         .on("mouseleave", () => { hideTooltip(); setLikesHighlight(null); })
-        .on("click", function() { const key = d3.select(this.parentNode).datum().key; if (key !== othersKey) setFocusCP(key); })
+        .on("click", function(event, d) { const key = d3.select(this.parentNode).datum().key; if (key !== othersKey) activateChartCp(event, key, setLikesHighlight, `<b>${d.data.tier}</b><br>${key}：<b>${d.data[key].toFixed(1)}%</b>（${d.data[`_${key}`]} 篇）`); })
         .on("keydown", function(e) { const key = d3.select(this.parentNode).datum().key; if ((e.key === "Enter" || e.key === " ") && key !== othersKey) setFocusCP(key); });
 
     const legendBox = d3.select("#likesLegend").html("").attr("class", "chart-legend");
@@ -1207,8 +1212,9 @@ function drawHeatmap(rows) {
 
     sortedCps.forEach((cp, i) => {
         const yPos = i * cellH;
+        const cpTotal = d3.sum(months, month => agg.get(cp + "|" + month)?.count || 0);
         const rowBtn = leftG.append("g").style("cursor", "pointer").attr("tabindex", 0).attr("role", "button")
-            .on("click", () => setFocusCP(cp))
+            .on("click", event => activateChartCp(event, cp, null, `<b>${cp}</b><br>当前时间范围发文：<b>${cpTotal.toLocaleString()}</b> 篇`))
             .on("keydown", e => { if (e.key === "Enter" || e.key === " ") setFocusCP(cp); });
         rowBtn.append("circle").attr("cx", 12).attr("cy", yPos + cellH / 2).attr("r", 4).attr("fill", cpColor(cp));
         rowBtn.append("text").attr("x", 22).attr("y", yPos + cellH / 2 + 4).attr("fill", "var(--text-main)").attr("font-size", "12px")
@@ -1234,7 +1240,7 @@ function drawHeatmap(rows) {
             if (val) {
                 cell.on("mousemove", (e) => showTooltip(`<b>${cp}</b> · ${m}<br>发文: ${o.count}篇 · 点赞: ${formatNumber(o.likes)}`, e))
                     .on("mouseleave", hideTooltip)
-                    .on("click", () => setFocusCP(cp));
+                    .on("click", event => activateChartCp(event, cp, null, `<b>${cp}</b> · ${m}<br>发文: ${o.count}篇 · 点赞: ${formatNumber(o.likes)}`));
             }
         });
     });

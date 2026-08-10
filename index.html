@@ -18,7 +18,7 @@
     <meta name="description" content="ReadAWrite 泰百 CP 同人作品数据看板。" />
     <title>泰百同人数据看板</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=20260810123416" />
+    <link rel="stylesheet" href="style.css?v=20260810123913" />
 </head>
 <body>
     <header class="site-header">
@@ -58,13 +58,13 @@
         <div id="dashboardGrid" style="display:none;">
             <section id="explore">
                 <div class="section-heading"><div><span class="section-kicker">DATA EXPLORER</span><h2>CP 对比</h2></div></div>
-                <div class="interaction-tip"><span aria-hidden="true">↗</span><strong>图例需点击两次</strong><span>第一次突出 CP 并显示数据，第二次跳转到作品清单；圆点和色块仍可单击跳转。</span></div>
+                <div class="interaction-tip"><span aria-hidden="true">↗</span><strong>点击图表或图例</strong><span>电脑端会直接跳转；手机端仅显示数据并预选对应 CP，不会自动滚动。</span></div>
                 <div class="grid-equal-2">
                     <article class="card"><div class="card-header"><div><h3>CP 规模与头部点赞</h3><p class="sub" id="cpBarSubText">横轴：作品数 · 纵轴：点赞 P90（前 10% 门槛）· 圆点：1000+ 作品数</p></div><select id="cpBarTopNSelect"><option value="10" selected>Top 10</option><option value="15">Top 15</option><option value="20">Top 20</option><option value="all">全部</option></select></div><div class="chart-scroll"><svg id="cpBarChart"></svg></div><div id="cpProfileLegend" class="chart-legend"></div></article>
                     <article class="card"><div class="card-header"><div><h3>点赞区间内的 CP 占比</h3><p class="sub" id="likesSubText">每个点赞区间按 100% 横向排列</p></div><select id="likesTopNSelect"><option value="10" selected>Top 10</option><option value="15">Top 15</option><option value="20">Top 20</option><option value="all">全部</option></select></div><div class="chart-scroll"><svg id="likesChart"></svg></div><div id="likesLegend" class="chart-legend"></div></article>
                 </div>
 
-                <article class="card wide-card" id="growthCard"><div class="card-header"><div><h3>创作时间轨迹</h3><p class="sub">月份连续展示；空白月份按 0 篇计算</p></div><select id="growthTopNSelect"><option value="10" selected>Top 10 CP</option><option value="15">Top 15 CP</option><option value="20">Top 20 CP</option><option value="all">全部 CP</option></select></div><div class="trend-split-container"><div class="trend-sub-card"><div class="trend-sub-title"><span>全站每月新增</span><span id="totalTrendMeta"></span></div><svg id="growthTotalChart"></svg></div><div class="trend-sub-card"><div class="trend-sub-title"><span>各 CP 每月新增</span><small>图例第一次突出，第二次进入 CP 聚焦</small></div><div id="growthLegend" class="chart-legend"></div><svg id="growthChart"></svg></div></div></article>
+                <article class="card wide-card" id="growthCard"><div class="card-header"><div><h3>创作时间轨迹</h3><p class="sub">月份连续展示；空白月份按 0 篇计算</p></div><select id="growthTopNSelect"><option value="10" selected>Top 10 CP</option><option value="15">Top 15 CP</option><option value="20">Top 20 CP</option><option value="all">全部 CP</option></select></div><div class="trend-split-container"><div class="trend-sub-card"><div class="trend-sub-title"><span>全站每月新增</span><span id="totalTrendMeta"></span></div><svg id="growthTotalChart"></svg></div><div class="trend-sub-card"><div class="trend-sub-title"><span>各 CP 每月新增</span><small>点击折线或图例可选择 CP</small></div><div id="growthLegend" class="chart-legend"></div><svg id="growthChart"></svg></div></div></article>
 
                 <article class="card wide-card" id="heatmapCard"><div class="card-header"><div><h3>CP 发文热力图</h3><p class="sub">颜色越深，代表当前月份的指标越高</p></div><div class="btn-group"><select id="heatmapSortSelect"><option value="total" selected>按总量排序</option><option value="alpha">按名称排序</option></select><select id="heatmapTopNSelect"><option value="10" selected>Top 10</option><option value="15">Top 15</option><option value="20">Top 20</option><option value="all">全部</option></select><select id="metricSelect"><option value="count">发文篇数</option><option value="likes">点赞总量</option><option value="view_count">阅读总量</option><option value="chapter_count">章节总量</option></select></div></div><div id="heatmapContainer"></div><div id="heatmapLegend"></div></article>
             </section>
@@ -100,7 +100,7 @@
         </article>
     </div>
     <div class="tooltip" id="tooltip"></div>
-    <script src="cp_catalog.js?v=20260810123416"></script>
-    <script src="script.js?v=20260810123416"></script>
+    <script src="cp_catalog.js?v=20260810123913"></script>
+    <script src="script.js?v=20260810123913"></script>
 </body>
 </html>
