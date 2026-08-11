@@ -654,7 +654,8 @@ function bindEvents() {
         }
     };
     document.getElementById("focusCpArrow").onclick = () => setFocusCpOptionsOpen(document.getElementById("focusCpOptions").hidden);
-    document.addEventListener("click", e => { if (!e.target.closest(".focus-combobox")) setFocusCpOptionsOpen(false); });
+    // “清空”和“随机 CP”也属于同一选择器；避免清空后被全局点击监听立即收起。
+    document.addEventListener("click", e => { if (!e.target.closest(".focus-picker")) setFocusCpOptionsOpen(false); });
     document.getElementById("clearFocusCpBtn").onclick = () => {
         setFocusCP("");
         focusCpSearch.focus();
