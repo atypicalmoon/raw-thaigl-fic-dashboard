@@ -44,7 +44,7 @@ function batchDecodeHtml(strings, maxDepth = 3) {
     return current.map(s => s.trim());
 }
 
-const TIER_ORDER = ["0–50", "51–100", "101–300", "301–500", "501–1k", "1k–2k", "2k–5k", "5k–8k", "8k+"];
+const TIER_ORDER = ["0-50", "51-100", "101-300", "301-500", "501-1k", "1k-2k", "2k-5k", "5k-8k", "8k+"];
 const TIER_BINS = [-1, 50, 100, 300, 500, 1000, 2000, 5000, 8000, Infinity];
 const tierColorScale = d3.scaleOrdinal().domain(TIER_ORDER).range(TIER_COLORS);
 
@@ -443,6 +443,12 @@ function setFocusCP(cp, options = {}) {
     hideTooltip();
     selectedFocusCp = cp || "";
     document.getElementById("focusCpSearch").value = selectedFocusCp;
+    const reportLink = document.getElementById("singleCpReportLink");
+    reportLink.hidden = !selectedFocusCp;
+    if (selectedFocusCp) {
+        reportLink.href = `reports/cp.html?cp=${encodeURIComponent(selectedFocusCp)}`;
+        reportLink.setAttribute("aria-label", `查看 ${selectedFocusCp} 创作趋势分析`);
+    }
     const focusHeader = document.getElementById("focusHeader");
     focusHeader.classList.toggle("lenamiu-clickable", selectedFocusCp === "LenaMiu");
     if (selectedFocusCp === "LenaMiu") {
@@ -559,7 +565,8 @@ function bindEvents() {
     const themeToggle = document.getElementById("themeToggle");
     const syncThemeToggle = () => {
         const whiteMode = document.documentElement.dataset.theme === "white";
-        themeToggle.textContent = whiteMode ? "○" : "◐";
+        const themeIcon = themeToggle.querySelector(".header-icon");
+        if (themeIcon) themeIcon.textContent = whiteMode ? "○" : "◐";
         themeToggle.setAttribute("aria-pressed", String(whiteMode));
         themeToggle.setAttribute("aria-label", whiteMode ? "恢复默认" : "简洁模式");
         themeToggle.title = whiteMode ? "恢复默认" : "简洁模式";
@@ -655,11 +662,11 @@ function bindEvents() {
     };
     const focusHeader = document.getElementById("focusHeader");
     focusHeader.onclick = event => {
-        if (event.target.closest("input, button, select, option")) return;
+        if (event.target.closest("input, button, select, option, a")) return;
         if (selectedFocusCp === "LenaMiu") launchLenaMiuEasterEgg(selectedFocusCp);
     };
     focusHeader.onkeydown = event => {
-        if ((event.key === "Enter" || event.key === " ") && selectedFocusCp === "LenaMiu" && !event.target.closest("input, button, select, option")) {
+        if ((event.key === "Enter" || event.key === " ") && selectedFocusCp === "LenaMiu" && !event.target.closest("input, button, select, option, a")) {
             event.preventDefault();
             launchLenaMiuEasterEgg(selectedFocusCp);
         }
@@ -905,9 +912,9 @@ function updateKPIs(rows) {
     const companyText = state.companies.size === companyToCps.size ? "全部公司" : `${state.companies.size}家公司`;
     const cpText = `${state.cps.size}个CP`;
     const years = Array.from(state.years).sort();
-    const yearText = years.length ? (years.length <= 3 ? years.join("、") : `${years[0]}–${years[years.length - 1]}`) : "未选年份";
+    const yearText = years.length ? (years.length <= 3 ? years.join("、") : `${years[0]}-${years[years.length - 1]}`) : "未选年份";
     const likeText = state.customLikeMin !== null || state.customLikeMax !== null ?
-        `点赞 ${state.customLikeMin ?? 0}–${state.customLikeMax ?? "∞"}` : `${state.tiers.size}个点赞档`;
+        `点赞 ${state.customLikeMin ?? 0}-${state.customLikeMax ?? "∞"}` : `${state.tiers.size}个点赞档`;
     document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText} · ${likeText} · 命中 ${totalArticles} 条）`;
     document.getElementById("mobileCompanyCount").innerText = `${state.companies.size} 个已选`;
     document.getElementById("mobileCpCount").innerText = `${state.cps.size} 个已选`;
@@ -1104,7 +1111,7 @@ function drawGrowthChart(rows) {
     seriesEnter.append("path").attr("class", "series-partial-line").attr("fill", "none").attr("stroke-width", 2).attr("stroke-dasharray", "5 4").attr("pointer-events", "none");
     seriesEnter.append("circle").attr("class", "series-partial-point").attr("r", 3).attr("fill", "var(--bg-card)").attr("stroke-width", 2).attr("pointer-events", "none");
     // 透明的粗「命中区」：专门用来接收 hover/click，比细线更容易悬浮到
-    seriesEnter.append("path").attr("class", "series-hit").attr("fill", "none").attr("stroke", "transparent").attr("stroke-width", 12).style("cursor", "pointer");
+    seriesEnter.append("path").attr("class", "series-hit").attr("fill", "none").attr("stroke", "transparent").attr("stroke-width", 20).style("cursor", "pointer");
     seriesEnter.append("g").attr("class", "series-dots");
     const seriesMerged = seriesEnter.merge(seriesSel);
 
@@ -1206,18 +1213,24 @@ function drawCpBar(rows) {
         .attr("class", "cp-point").attr("transform", d => `translate(${x(d.count)},${y(d.p90)})`)
         .attr("data-cp", d => d.cp)
         .attr("tabindex", 0).attr("role", "button").style("cursor", "pointer")
-        .on("mousemove", (e, d) => showTooltip(`<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`, e))
+        .on("mousemove", (e, d) => showTooltip(profileTooltip(d), e))
         .on("mouseenter", (e, d) => setProfileHighlight(d.cp))
-        .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => activateChartCp(e, d.cp, setProfileHighlight, `<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`))
+        .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => activateChartCp(e, d.cp, setProfileHighlight, profileTooltip(d)))
         .on("keydown", (e, d) => { if (e.key === "Enter" || e.key === " ") setFocusCP(d.cp); });
     points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("stroke", "#fff").attr("stroke-width", 1.5);
     const legend = d3.select("#cpProfileLegend").html("").attr("class", "chart-legend");
     data.forEach(d => {
         const item = legend.append("button").attr("type", "button").attr("class", "chart-legend-button").attr("data-cp", d.cp)
-            .on("click", event => activateLegend(event, "profile", d.cp, setProfileHighlight, `<b>${d.cp}</b><br>作品：${d.count.toLocaleString()}<br>点赞 P90：${Math.round(d.p90).toLocaleString()}<br>1000+：${d.highCount} 篇`)).on("mouseenter focus", () => setProfileHighlight(d.cp)).on("mouseleave blur", () => setProfileHighlight(null));
+            .on("click", event => activateLegend(event, "profile", d.cp, setProfileHighlight, profileTooltip(d))).on("mouseenter focus", () => setProfileHighlight(d.cp)).on("mouseleave blur", () => setProfileHighlight(null));
         item.append("span").style("background", cpColor(d.cp));
         item.append("b").text(d.cp);
     });
+}
+
+function profileTooltip(d) {
+    const count = d.count.toLocaleString();
+    const p90 = Math.round(d.p90).toLocaleString();
+    return `<b>${d.cp}</b><br>共收录 ${count} 篇；前 10% 作品的点赞门槛为 ${p90}。<br>${d.highCount.toLocaleString()} 篇达到 1000+ 赞。`;
 }
 
 function setProfileHighlight(cp) {
@@ -1398,8 +1411,8 @@ function drawHeatmap(rows) {
             .on("click", event => activateChartCp(event, cp, null, `<b>${cp}</b><br>当前时间范围发文：<b>${cpTotal.toLocaleString()}</b> 篇`))
             .on("keydown", e => { if (e.key === "Enter" || e.key === " ") setFocusCP(cp); });
         rowBtn.append("circle").attr("cx", 12).attr("cy", yPos + cellH / 2).attr("r", 4).attr("fill", cpColor(cp));
-        rowBtn.append("text").attr("x", 22).attr("y", yPos + cellH / 2 + 4).attr("fill", "var(--text-main)").attr("font-size", "12px")
-            .text(cp.length > 16 ? cp.slice(0, 15) + '…' : cp).append("title").text(cp);
+        rowBtn.append("text").attr("x", 22).attr("y", yPos + cellH / 2 + 4).attr("fill", "var(--text-main)").attr("font-size", cp.length > 13 ? "10px" : "12px")
+            .text(cp).append("title").text(cp);
     });
 
     const scrollArea = wrapper.append("div").attr("class", "heatmap-scroll-area");
@@ -1519,53 +1532,107 @@ function renderFocusTable(cpArticles) {
         else linkTd.append("span").attr("class", "plain-title").attr("title", d.title).text(d.title);
         tr.append("td").append("span").attr("class", "author-text").text(d.author);
         tr.append("td").style("color", "var(--text-muted)").text(d.publish_date_str);
-        tr.append("td").style("text-align", "right").style("font-weight", "700").text(d.likes.toLocaleString());
-        tr.append("td").style("text-align", "right").style("color", "var(--text-muted)").text(d.view_count.toLocaleString());
+        tr.append("td").attr("class", "number").style("font-weight", "700").text(d.likes.toLocaleString());
+        tr.append("td").attr("class", "number").style("color", "var(--text-muted)").text(d.view_count.toLocaleString());
         tr.append("td").style("text-align", "center").append("span").attr("class", `tag-status ${d.is_end ? 'tag-end' : 'tag-ongoing'}`).text(d.is_end ? "完结" : "连载");
     });
 }
 
 let lastDailyCp = "";
 
+let dailyRevealTimer = null;
+let dailyCloseTimer = null;
+let dailySelection = null;
+
 function drawDailyCp() {
     const eligible = dedupeByLink(allParsedRows.filter(d =>
         (d.status || "").toLowerCase() === "ok" && d.publish_date_obj && d.url && d.url !== "#"
     ));
     if (!eligible.length) return;
-    const grouped = d3.group(eligible, d => d.cp);
-    const cps = Array.from(grouped.keys());
-    let cp = cps[Math.floor(Math.random() * cps.length)];
-    if (cps.length > 1 && cp === lastDailyCp) cp = cps[(cps.indexOf(cp) + 1) % cps.length];
-    lastDailyCp = cp;
-    const works = grouped.get(cp);
-    const work = works[Math.floor(Math.random() * works.length)];
-    document.getElementById("dailyDrawCp").innerText = cp;
+    if (!dailySelection) {
+        const grouped = d3.group(eligible, d => d.cp);
+        const cps = Array.from(grouped.keys());
+        const cp = cps[Math.floor(Math.random() * cps.length)];
+        const works = grouped.get(cp);
+        dailySelection = { cp, work: works[Math.floor(Math.random() * works.length)] };
+    }
+    const { cp, work } = dailySelection;
     const title = document.getElementById("dailyWorkTitle");
+    const layer = document.getElementById("dailyDrawLayer");
+    const card = layer.querySelector(".daily-draw-card");
+    const cpLabel = document.getElementById("dailyDrawCp");
+    const firstOpen = layer.hidden;
+    clearTimeout(dailyCloseTimer);
+    layer.classList.remove("is-closing");
+    clearTimeout(dailyRevealTimer);
+    cpLabel.innerText = cp;
+    const cpNameLength = Array.from(cp).length;
+    cpLabel.classList.toggle("long-name", cpNameLength > 10);
+    cpLabel.classList.toggle("extra-long-name", cpNameLength > 15);
     title.innerText = work.title;
     title.href = work.url;
-    document.getElementById("dailyWorkAuthor").innerText = `作者：${work.author}`;
+    document.getElementById("dailyWorkStatus").innerText = work.is_end ? "已完结" : "连载中";
+    document.getElementById("dailyWorkAuthor").innerText = work.author || "—";
     document.getElementById("dailyWorkLikes").innerText = `♥ ${work.likes.toLocaleString()}`;
     document.getElementById("dailyWorkDate").innerText = work.publish_date_str;
-    const layer = document.getElementById("dailyDrawLayer");
+    document.getElementById("dailyDrawDate").innerText = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).replaceAll("/", ".");
     layer.hidden = false;
-    const card = layer.querySelector(".daily-draw-card");
+    if (firstOpen) {
+        layer.classList.remove("is-opening");
+        void layer.offsetWidth;
+        layer.classList.add("is-opening");
+    }
+    card.classList.remove("is-flipped", "is-revealing");
     card.style.animation = "none";
     void card.offsetWidth;
     card.style.animation = "";
-    document.getElementById("dailyDrawClose").focus();
+    card.classList.add("is-revealing");
+    document.getElementById("dailyDrawHint").innerText = "点击卡牌翻开";
+    dailyRevealTimer = setTimeout(() => {
+        card.classList.remove("is-revealing");
+        card.focus();
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 520);
+}
+
+function flipDailyCard() {
+    const card = document.getElementById("dailyDrawCard");
+    if (card.classList.contains("is-flipped")) return;
+    card.classList.add("is-flipped");
+    card.setAttribute("aria-label", "今日 CP 抽取结果");
+    document.getElementById("dailyDrawHint").innerText = "点击空白处收起";
 }
 
 function closeDailyDraw() {
-    document.getElementById("dailyDrawLayer").hidden = true;
-    document.getElementById("dailyDrawTrigger").focus();
+    clearTimeout(dailyRevealTimer);
+    dailyRevealTimer = null;
+    const layer = document.getElementById("dailyDrawLayer");
+    layer.classList.remove("is-opening");
+    layer.classList.add("is-closing");
+    dailyCloseTimer = setTimeout(() => {
+        layer.hidden = true;
+        layer.classList.remove("is-closing");
+        const card = document.querySelector("#dailyDrawLayer .daily-draw-card");
+        card.classList.remove("is-revealing", "is-flipped");
+        card.setAttribute("aria-label", "点击翻开今日 CP 卡牌");
+        document.getElementById("dailyDrawTrigger").focus();
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320);
 }
 
 document.getElementById("dailyDrawTrigger").addEventListener("click", event => {
     event.preventDefault();
     drawDailyCp();
 });
-document.getElementById("dailyDrawAgain").addEventListener("click", drawDailyCp);
 document.getElementById("dailyDrawClose").addEventListener("click", closeDailyDraw);
+document.getElementById("dailyDrawCard").addEventListener("click", event => {
+    if (event.target.closest("a,button")) return;
+    flipDailyCard();
+});
+document.getElementById("dailyDrawCard").addEventListener("keydown", event => {
+    if ((event.key === "Enter" || event.key === " ") && !event.target.closest("a,button")) {
+        event.preventDefault();
+        flipDailyCard();
+    }
+});
 document.getElementById("dailyDrawLayer").addEventListener("click", event => {
     if (event.target.id === "dailyDrawLayer") closeDailyDraw();
 });
