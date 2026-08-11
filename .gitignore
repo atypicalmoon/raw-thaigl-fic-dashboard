@@ -10,3 +10,5 @@ data/cp_event_research.csv
 scripts/build_cp_report_data.py
 更新全部报告.bat
 reports/README.md
+
+reports/.vscode/
