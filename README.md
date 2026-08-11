@@ -49,16 +49,9 @@ ReadAWrite 的标题、简介和 Tag 可能被作者后续修改，作品也可�
 
 数据不会实时更新。非重大问题将不定期处理，下一次数据更新暂定于年底。
 
-### 无需 Codex 的更新方式
+### 报告数据
 
-1. 用新数据替换 `articles_cleaned.csv`。
-2. 在 `data/report_events.csv` 中补充剧播、项目公布或正式预告节点；中文名、原名和来源链接都维护在同一行，不需要单独的剧名映射表。
-3. 同步检查 `data/cp_event_research.csv`。这里保存全部 CP 的核对状态；即使暂时没有可靠节点，也不要删除对应 CP。
-4. 双击 `更新全部报告.bat`。
-5. 打开 `reports/index.html` 和任意 `reports/cp.html?cp=CP名称` 检查结果。
-
-网页浏览时不会实时联网，也不依赖 Codex。剧播节点会在生成阶段写入轻量的 `reports/cp-report-data.js`。
-核对状态中，`confirmed` 表示已有可验证节点，`announcement_only` 表示只有正式公布或定档、尚无首播节点，`context_only` 表示已查明配对背景但没有双方合作剧。`needs_review` 与 `not_found` 只表示截至最近核对日期尚未完成可靠确认，不代表该 CP 确定没有合作剧。
+网页浏览时不会实时联网。剧播节点在生成阶段写入轻量的 `reports/cp-report-data.js`；详细维护说明仅保留在本地文件中。
 
 ### 剧名译名优先级
 

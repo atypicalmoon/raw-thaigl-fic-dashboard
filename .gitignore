@@ -1,0 +1,5 @@
+# 本机维护笔记与临时预览，不参与发布
+LOCAL_NOTES.md
+reports/*-preview.html
+reports/*-compare.html
+scripts/__pycache__/
