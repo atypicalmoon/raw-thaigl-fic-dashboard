@@ -2,12 +2,88 @@
   const all=window.CP_REPORT_DATA||{};
   const requested=new URLSearchParams(location.search).get("cp")||"LenaMiu";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  
+  // ────────────────────────────────────────────────────────────
+  // 🚀 高性能 DOM 批量实体解码（100% 解析所有 HTML5 实体）
+  // ────────────────────────────────────────────────────────────
+  const _decodeScratch = document.createElement('textarea');
+  const _DECODE_SEP = '\uE000\uE001';
+
+  function decodeHtmlSingle(str, maxDepth = 3) {
+      if (typeof str !== 'string' || !str) return str;
+      let current = str;
+      for (let i = 0; i < maxDepth; i++) {
+          _decodeScratch.innerHTML = current;
+          const decoded = _decodeScratch.value;
+          if (decoded === current) break;
+          current = decoded;
+      }
+      return current.trim();
+  }
+
+  function batchDecodeHtml(strings, maxDepth = 3) {
+      let current = strings.map(s => (typeof s === 'string' ? s : ''));
+      for (let pass = 0; pass < maxDepth; pass++) {
+          const joined = current.join(_DECODE_SEP);
+          _decodeScratch.innerHTML = joined;
+          const decodedJoined = _decodeScratch.value;
+          const parts = decodedJoined.split(_DECODE_SEP);
+          if (parts.length !== current.length) {
+              return current.map(s => decodeHtmlSingle(s, maxDepth - pass));
+          }
+          let changed = false;
+          for (let i = 0; i < parts.length; i++) {
+              if (parts[i] !== current[i]) { changed = true; break; }
+          }
+          current = parts;
+          if (!changed) break;
+      }
+      return current.map(s => s.trim());
+  }
+
   const data=all[requested];
   if(!data){
     document.title=`${requested} 暂无报告数据｜ReadAWrite`;
     document.querySelector("main").innerHTML=`<section class="hero compact-hero"><h1 class="report-title"><span class="cp-name">${esc(requested)}</span><small>暂无报告数据</small></h1><p class="lead">当前链接对应的 CP 不在本次报告数据范围内。</p><div class="actions"><a class="button" href="../index.html#focus">返回主看板</a></div></section>`;
     return;
   }
+
+  // ────────────────────────────────────────────────────────────
+  // ⚡ 批量收集所有字段，只触发 1~3 次 DOM 操作，完成全部解码
+  // ────────────────────────────────────────────────────────────
+  const toDecode = [];
+  if (data.works) {
+    data.works.forEach(w => toDecode.push(w.title, w.label, w.author));
+  }
+  if (data.authorCards) {
+    data.authorCards.forEach(a => {
+      toDecode.push(a.name);
+      if (a.representativeWorks) a.representativeWorks.forEach(w => toDecode.push(w.title));
+    });
+  }
+  if (data.events) {
+    data.events.forEach(e => toDecode.push(e.title, e.note, e.date));
+  }
+
+  const decodedPool = batchDecodeHtml(toDecode);
+  let dIdx = 0;
+
+  if (data.works) {
+    data.works.forEach(w => { w.title = decodedPool[dIdx++]; w.label = decodedPool[dIdx++]; w.author = decodedPool[dIdx++]; });
+  }
+  if (data.authorCards) {
+    data.authorCards.forEach(a => {
+      a.name = decodedPool[dIdx++];
+      if (a.representativeWorks) a.representativeWorks.forEach(w => { w.title = decodedPool[dIdx++]; });
+    });
+  }
+  if (data.events) {
+    data.events.forEach(e => { e.title = decodedPool[dIdx++]; e.note = decodedPool[dIdx++]; e.date = decodedPool[dIdx++]; });
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 页面渲染逻辑保持不变
+  // ────────────────────────────────────────────────────────────
   const fmt=n=>Number(n||0).toLocaleString("zh-CN");
   const maxMonth=Math.max(1,...Object.values(data.months));
   const yearEntries=Object.entries(data.years); const maxYear=Math.max(1,...yearEntries.map(x=>x[1]));
@@ -18,7 +94,7 @@
   const months=`<div class="month-chart-wrap"><svg class="month-line-chart" viewBox="0 0 800 198" role="img" aria-label="${esc(data.cp)} 2026 年 1 月至 8 月新增作品走势"><g class="month-grid"><line x1="50" y1="48" x2="750" y2="48"/><line x1="50" y1="95" x2="750" y2="95"/><line x1="50" y1="142" x2="750" y2="142"/></g><polyline class="month-line" points="${solidPoints}"/><polyline class="month-line partial-line" points="${partialPoints}"/>${monthPoints.map((p,i)=>`<g class="month-point ${i===7?'partial-point':''}"><circle cx="${p.x}" cy="${p.y}" r="5"/><text class="month-value" x="${p.x}" y="${Math.max(18,p.y-13)}">${fmt(p.v)}</text><text class="month-label" x="${p.x}" y="177">${p.label}</text></g>`).join('')}</svg></div>`;
   const years=yearEntries.map(([y,v])=>`<article class="year"><i style="--h:${Math.max(2,Math.round(v/maxYear*100))}%"></i><strong>${y}</strong><b>${fmt(v)}</b><span>${y==='2026'?'截至8月10日':'年度新增'}</span></article>`).join("");
   const works=data.works.map(w=>`<a class="work compact-work discovery-work" href="${esc(w.url)}" target="_blank" rel="noopener"><div class="work-head"><em title="${esc(w.label)}">${esc(w.label)}</em><h3 title="${esc(w.title)}">${esc(w.title)}</h3><i aria-hidden="true">↗</i></div><p class="work-meta" title="${esc(w.author)}">${esc(w.author)} · ${fmt(w.chapters)} 章 · ${w.ended?'已完结':'连载中'}</p><div class="work-stats"><span><b>${fmt(w.likes)}</b>赞</span><span><b>${fmt(w.views)}</b>阅读</span></div></a>`).join("")||`<p class="empty-copy">当前数据范围内暂无有效作品。</p>`;
-  const authors=data.authorCards.map(a=>{const titles=(a.representativeWorks||[]).map(w=>`<a href="${esc(w.url)}" target="_blank" rel="noopener" title="${esc(w.title)}">“${esc(w.title)}”</a>`).join('<i>·</i>');return `<article class="fact compact-author author-profile"><div class="author-head"><b class="author-name" title="${esc(a.name)}">${esc(a.name)}</b>${titles?`<span class="author-works">${titles}</span>`:''}</div><div class="author-stats"><span><b>${fmt(a.works)}</b>作品</span><span><b>${fmt(a.avgLikes)}</b>篇均赞</span><span><b>${fmt(a.avgViews)}</b>篇均阅读</span></div><div class="author-sparks">${['产出','点赞','阅读'].map((label,i)=>`<span><em>${label}</em><i><b style="width:${a.scores[i]}%"></b></i></span>`).join('')}</div></article>`}).join("")||`<p class="empty-copy">有效作者样本较少，暂不展示作者卡。</p>`;
+  const authors=data.authorCards.map(a=>{const titles=(a.representativeWorks||[]).map(w=>`<a href="${esc(w.url)}" target="_blank" rel="noopener" title="${esc(w.title)}">“${esc(w.title)}”</a>`).join('<i>·</i>');return `<article class="fact compact-author author-profile"><div class="author-head"><b class="author-name" title="${esc(a.name)}">${esc(a.name)}</b>${titles?`<span class="author-works">${titles}</span>`:''}</div><div class="author-stats"><span><b>${fmt(a.works)}</b>作品</span><span><b>${fmt(a.avgLikes)}</b>赞/篇</span><span><b>${fmt(a.avgViews)}</b>阅读/篇</span></div><div class="author-sparks">${['产出','点赞','阅读'].map((label,i)=>`<span><em>${label}</em><i><b style="width:${a.scores[i]}%"></b></i></span>`).join('')}</div></article>`}).join("")||`<p class="empty-copy">有效作者样本较少，暂不展示作者卡。</p>`;
   const events=data.events.length?data.events.map(e=>`<article class="case"><small>${esc(e.date)} · ${e.type==='broadcast'?'泰国剧播节点':'前置发布节点'}</small><h3>${esc(e.title)}</h3><p>${esc(e.note)}。</p></article>`).join(''):`<article class="pending"><small>剧播参照</small><h3>${esc(data.eventStatus||'暂无已整理的对应节点')}</h3><p>本页仍保留完整创作趋势；未找到可靠日期不代表该 CP 没有合作项目，后续更新时继续核实。</p></article>`;
   document.title=`${data.cp} 创作趋势分析｜ReadAWrite`;
   document.querySelector('meta[name="description"]').content=`${data.cp} ReadAWrite 同人创作趋势分析`;
