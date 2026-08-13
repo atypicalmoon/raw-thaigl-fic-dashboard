@@ -323,8 +323,10 @@ function applyStatusFilter() {
 }
 
 function loadArticlesFile() {
-    const dataVersion = window.DASHBOARD_META?.data_version || Date.now();
-    d3.text(`./articles_cleaned.csv?v=${encodeURIComponent(dataVersion)}`, { cache: "no-cache" })
+    // Keep the URL stable between data releases so mobile browsers can reuse the
+    // already-downloaded dataset.  Change this value only when the CSV changes.
+    const dataVersion = window.DASHBOARD_META?.data_version || "20260813";
+    d3.text(`./articles_cleaned.csv?v=${encodeURIComponent(dataVersion)}`)
         .then(text => {
             allParsedRows = parseCSVText(text);
             initDashboard();
