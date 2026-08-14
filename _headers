@@ -1,0 +1,18 @@
+# Cloudflare Pages: versioned data and static assets can be reused safely.
+/articles_summary.csv
+  Cache-Control: public, max-age=31556952, immutable
+
+/data/articles/*
+  Cache-Control: public, max-age=31556952, immutable
+
+/script.js
+  Cache-Control: public, max-age=31556952, immutable
+
+/cp_catalog.js
+  Cache-Control: public, max-age=31556952, immutable
+
+/style.css
+  Cache-Control: public, max-age=31556952, immutable
+
+/reports/*.js
+  Cache-Control: public, max-age=31556952, immutable

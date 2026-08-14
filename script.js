@@ -100,6 +100,8 @@ function makeCpColorAccessor(cps, colorMap) {
 const heatInterpolator = d3.interpolateYlOrRd;
 let allParsedRows = [];
 let dataAfterStatus = [];
+const focusDetailsCache = new Map();
+const focusDetailsLoading = new Map();
 let baseOkArticleCount = 0;
 let cpColor = null;
 let selectedFocusCp = "";
@@ -119,6 +121,52 @@ let dedupInfo = { totalRows: 0, uniqueRows: 0 };
 let companyToCps = new Map();
 let cpToCompany = new Map();
 const cpCatalog = Array.isArray(window.CP_CATALOG) ? window.CP_CATALOG : [];
+const FILTER_STATE_STORAGE_KEY = "dashboard-filter-state-v1";
+
+function getAvailableYears() {
+    return Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean);
+}
+
+function setFromSavedValues(targetSet, savedValues, allValues, useAll) {
+    const values = useAll ? allValues : (Array.isArray(savedValues) ? savedValues.filter(value => allValues.includes(value)) : allValues);
+    replaceSetContents(targetSet, values);
+}
+
+function restoreFilterState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(FILTER_STATE_STORAGE_KEY));
+        if (!saved || typeof saved !== "object") return;
+        const companies = Array.from(companyToCps.keys());
+        const cps = cpColor.domain();
+        const years = getAvailableYears();
+        setFromSavedValues(state.companies, saved.companies, companies, saved.allCompanies);
+        setFromSavedValues(state.cps, saved.cps, cps, saved.allCps);
+        setFromSavedValues(state.years, saved.years, years, saved.allYears);
+        setFromSavedValues(state.tiers, saved.tiers, TIER_ORDER, saved.allTiers);
+        state.includeReview = Boolean(saved.includeReview);
+        state.customLikeMin = Number.isFinite(saved.customLikeMin) ? saved.customLikeMin : null;
+        state.customLikeMax = Number.isFinite(saved.customLikeMax) ? saved.customLikeMax : null;
+        selectedFocusCp = cps.includes(saved.focusCp) ? saved.focusCp : "";
+    } catch (_) {}
+}
+
+function persistFilterState() {
+    try {
+        const companies = Array.from(companyToCps.keys());
+        const cps = cpColor.domain();
+        const years = getAvailableYears();
+        localStorage.setItem(FILTER_STATE_STORAGE_KEY, JSON.stringify({
+            companies: Array.from(state.companies), allCompanies: state.companies.size === companies.length,
+            cps: Array.from(state.cps), allCps: state.cps.size === cps.length,
+            years: Array.from(state.years), allYears: state.years.size === years.length,
+            tiers: Array.from(state.tiers), allTiers: state.tiers.size === TIER_ORDER.length,
+            includeReview: state.includeReview,
+            customLikeMin: state.customLikeMin,
+            customLikeMax: state.customLikeMax,
+            focusCp: selectedFocusCp,
+        }));
+    } catch (_) {}
+}
 
 // 🚀 性能优化 2：缓存各图表的持久化 <g> 容器引用，避免每次 update() 都 selectAll("*").remove() 整个 SVG 再重建。
 // 配合下面 join() 的 key function（例如 d => d.cp），D3 只对发生变化的元素做增删/属性过渡，DOM 操作量大幅减少。
@@ -227,6 +275,30 @@ function normalizeLinkKey(rawLink, fallbackUrl) {
     return src.replace(/\/+$/, "").toLowerCase();
 }
 
+function parseCpDetails(text) {
+    const rawRows = d3.csvParse(text);
+    const decoded = batchDecodeHtml(rawRows.flatMap(d => [d.title || "", d.author || ""]));
+    return new Map(rawRows.map((d, index) => [d.detail_key, { title: decoded[index * 2] || "无标题", author: decoded[index * 2 + 1] || "匿名", url: resolveArticleUrl(d) }]));
+}
+
+function loadCpDetails(cp) {
+    if (focusDetailsCache.has(cp)) return Promise.resolve(focusDetailsCache.get(cp));
+    if (focusDetailsLoading.has(cp)) return focusDetailsLoading.get(cp);
+    const version = window.DASHBOARD_META?.data_version || "20260813";
+    const request = d3.text(`data/articles/${encodeURIComponent(cp)}.csv?v=${encodeURIComponent(version)}`).then(text => {
+        const details = parseCpDetails(text); focusDetailsCache.set(cp, details); return details;
+    }).catch(error => {
+        console.warn("未能读取作品详情", error); focusDetailsCache.set(cp, new Map()); return focusDetailsCache.get(cp);
+    }).finally(() => focusDetailsLoading.delete(cp));
+    focusDetailsLoading.set(cp, request);
+    return request;
+}
+
+function hydrateCpArticles(cp, articles) {
+    const details = focusDetailsCache.get(cp);
+    return details ? articles.map(article => ({ ...article, ...(details.get(article.detail_key) || {}) })) : null;
+}
+
 // 每行需要 HTML 解码的字段，统一在这里声明，方便以后增减
 const DECODE_FIELDS = ["title", "author", "cp", "company", "keyword", "duplicate_cps"];
 
@@ -295,7 +367,8 @@ function parseCSVText(text) {
             view_count: +String(d.view_count || "0").replace(/,/g, "") || 0,
             chapter_count: +d.chapter_count || 0,
             url,
-            _linkKey: normalizeLinkKey(d.link, url)
+            detail_key: d.detail_key || "",
+            _linkKey: d.detail_key || normalizeLinkKey(d.link, url)
         };
     }).filter(d => d.cp);
 }
@@ -326,7 +399,7 @@ function loadArticlesFile() {
     // Keep the URL stable between data releases so mobile browsers can reuse the
     // already-downloaded dataset.  Change this value only when the CSV changes.
     const dataVersion = window.DASHBOARD_META?.data_version || "20260813";
-    d3.text(`./articles_cleaned.csv?v=${encodeURIComponent(dataVersion)}`)
+    d3.text(`./articles_summary.csv?v=${encodeURIComponent(dataVersion)}`)
         .then(text => {
             allParsedRows = parseCSVText(text);
             initDashboard();
@@ -363,6 +436,7 @@ function initDashboard() {
     state.companies = new Set(Array.from(companyToCps.keys()));
     state.years = new Set(Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean));
     state.tiers = new Set(TIER_ORDER);
+    restoreFilterState();
 
     applyStatusFilter();
 
@@ -370,6 +444,9 @@ function initDashboard() {
     renderCpCheckboxes();
     renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
+    document.getElementById("includeReviewToggle").checked = state.includeReview;
+    document.getElementById("customLikeMin").value = state.customLikeMin ?? "";
+    document.getElementById("customLikeMax").value = state.customLikeMax ?? "";
 
     document.getElementById("filterPanel").style.display = "block";
     document.getElementById("dashboardGrid").style.display = "block";
@@ -467,6 +544,7 @@ function setFocusCP(cp, options = {}) {
     easterEggLayer.classList.remove("active");
     easterEggLayer.setAttribute("aria-hidden", "true");
     drawFocusArea(getFilteredRows());
+    persistFilterState();
     if (cp && shouldScroll) {
         document.getElementById("focus").scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -933,6 +1011,7 @@ function update() {
 
 function updateNow() {
     const rows = getFilteredRows();
+    persistFilterState();
     updateKPIs(rows);
     drawCpBar(rows);
     drawLikesChart(rows);
@@ -1476,9 +1555,15 @@ function drawFocusArea(rows) {
     }
 
     const cpArticles = rows.filter(d => d.cp === selectedFocusCp);
-    currentFocusArticles = cpArticles;
+    const hydratedArticles = hydrateCpArticles(selectedFocusCp, cpArticles);
+    currentFocusArticles = hydratedArticles || [];
     tableVisibleCount = getTablePageSize();
-    renderFocusTable(cpArticles);
+    if (hydratedArticles) renderFocusTable(hydratedArticles);
+    else {
+        renderFocusTableLoading();
+        const requestedCp = selectedFocusCp;
+        loadCpDetails(requestedCp).then(() => { if (selectedFocusCp === requestedCp) drawFocusArea(getFilteredRows()); });
+    }
 
     document.getElementById("currentFocusCpLabel").innerText = selectedFocusCp;
     const cacheKey = `${selectedFocusCp}|${Array.from(state.companies).sort().join(",")}|${Array.from(state.cps).sort().join(",")}|${Array.from(state.years).sort().join(",")}|${Array.from(state.tiers).sort().join(",")}|${state.customLikeMin ?? ""}|${state.customLikeMax ?? ""}|${state.includeReview}`;
@@ -1497,6 +1582,14 @@ function drawFocusArea(rows) {
     document.getElementById("focusCompletionRate").innerText = `${stats.completionRate.toFixed(1)}%`;
     document.getElementById("focusHighLikeRate").innerText = `${stats.highRate}%`;
     document.getElementById("focusPeakMonth").innerText = stats.peakMonth;
+}
+
+function renderFocusTableLoading() {
+    const tbody = d3.select("#articleTableBody");
+    tbody.selectAll("*").remove();
+    document.getElementById("articleCountBadge").innerText = "正在加载作品详情…";
+    document.getElementById("loadMoreArticlesBtn").hidden = true;
+    tbody.append("tr").append("td").attr("colspan", 6).style("text-align", "center").style("color", "var(--text-sub)").style("padding", "20px 0").text("正在加载该 CP 的作品清单…");
 }
 
 function renderFocusTable(cpArticles) {
@@ -1560,6 +1653,14 @@ function drawDailyCp() {
         dailySelection = { cp, work: works[Math.floor(Math.random() * works.length)] };
     }
     const { cp, work } = dailySelection;
+    const detail = focusDetailsCache.get(cp)?.get(work.detail_key);
+    if (!detail) {
+        loadCpDetails(cp).then(() => {
+            if (dailySelection?.cp === cp) drawDailyCp();
+        });
+        return;
+    }
+    Object.assign(work, detail);
     const title = document.getElementById("dailyWorkTitle");
     const layer = document.getElementById("dailyDrawLayer");
     const card = layer.querySelector(".daily-draw-card");
