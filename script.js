@@ -517,36 +517,83 @@ function updateCpSelectionByCompany(newlyAddedCompany = null) {
     renderCpCheckboxes();
 }
 
+function syncSingleCpReportLink() {
+    const reportLink = document.getElementById("singleCpReportLink");
+    if (!reportLink) return;
+
+    if (!selectedFocusCp) {
+        reportLink.hidden = true;
+        reportLink.removeAttribute("href");
+        reportLink.removeAttribute("aria-label");
+        return;
+    }
+
+    reportLink.hidden = false;
+    reportLink.href = `reports/cp.html?cp=${encodeURIComponent(selectedFocusCp)}`;
+    reportLink.setAttribute(
+        "aria-label",
+        `查看 ${selectedFocusCp} 创作趋势分析`
+    );
+}
+
 function setFocusCP(cp, options = {}) {
     const shouldScroll = options.scroll !== false;
+
     hideTooltip();
+
     selectedFocusCp = cp || "";
-    document.getElementById("focusCpSearch").value = selectedFocusCp;
-    const reportLink = document.getElementById("singleCpReportLink");
-    reportLink.hidden = !selectedFocusCp;
-    if (selectedFocusCp) {
-        reportLink.href = `reports/cp.html?cp=${encodeURIComponent(selectedFocusCp)}`;
-        reportLink.setAttribute("aria-label", `查看 ${selectedFocusCp} 创作趋势分析`);
+
+    const focusCpSearch = document.getElementById("focusCpSearch");
+    if (focusCpSearch) {
+        focusCpSearch.value = selectedFocusCp;
     }
+
+    // 同步单 CP 报告入口
+    syncSingleCpReportLink();
+
     const focusHeader = document.getElementById("focusHeader");
-    focusHeader.classList.toggle("lenamiu-clickable", selectedFocusCp === "LenaMiu");
-    if (selectedFocusCp === "LenaMiu") {
-        focusHeader.setAttribute("role", "button");
-        focusHeader.setAttribute("tabindex", "0");
-        focusHeader.setAttribute("aria-label", "播放 LenaMiu 隐藏图案");
-    } else {
-        focusHeader.removeAttribute("role");
-        focusHeader.removeAttribute("tabindex");
-        focusHeader.removeAttribute("aria-label");
+
+    if (focusHeader) {
+        focusHeader.classList.toggle(
+            "lenamiu-clickable",
+            selectedFocusCp === "LenaMiu"
+        );
+
+        if (selectedFocusCp === "LenaMiu") {
+            focusHeader.setAttribute("role", "button");
+            focusHeader.setAttribute("tabindex", "0");
+            focusHeader.setAttribute(
+                "aria-label",
+                "播放 LenaMiu 隐藏图案"
+            );
+        } else {
+            focusHeader.removeAttribute("role");
+            focusHeader.removeAttribute("tabindex");
+            focusHeader.removeAttribute("aria-label");
+        }
     }
+
     const easterEggLayer = document.getElementById("lenamiuEasterEgg");
-    easterEggLayer.replaceChildren();
-    easterEggLayer.classList.remove("active");
-    easterEggLayer.setAttribute("aria-hidden", "true");
+
+    if (easterEggLayer) {
+        easterEggLayer.replaceChildren();
+        easterEggLayer.classList.remove("active");
+        easterEggLayer.setAttribute("aria-hidden", "true");
+    }
+
     drawFocusArea(getFilteredRows());
+
     persistFilterState();
-    if (cp && shouldScroll) {
-        document.getElementById("focus").scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (selectedFocusCp && shouldScroll) {
+        const focusSection = document.getElementById("focus");
+
+        if (focusSection) {
+            focusSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
     }
 }
 
@@ -1021,14 +1068,57 @@ function updateNow() {
 }
 
 function syncFocusSelectAndDraw(rows) {
-    const availableCps = Array.from(state.cps).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+    const availableCps = Array.from(state.cps).sort(
+        (a, b) =>
+            a.localeCompare(
+                b,
+                "en",
+                { sensitivity: "base" }
+            )
+    );
+
     focusCpChoices = availableCps;
+
+    // 当前筛选条件下没有任何 CP
     if (!availableCps.length) {
-        document.getElementById("focusCpSearch").value = ""; selectedFocusCp = ""; drawFocusArea(rows); return;
+        selectedFocusCp = "";
+
+        const focusCpSearch = document.getElementById("focusCpSearch");
+        if (focusCpSearch) {
+            focusCpSearch.value = "";
+        }
+
+        syncSingleCpReportLink();
+        drawFocusArea(rows);
+
+        return;
     }
-    if (selectedFocusCp && !state.cps.has(selectedFocusCp)) selectedFocusCp = "";
-    document.getElementById("focusCpSearch").value = selectedFocusCp;
-    if (!document.getElementById("focusCpOptions").hidden) renderFocusCpOptions();
+
+    // 如果之前保存的 CP 已经不在当前筛选范围，就清空
+    if (
+        selectedFocusCp &&
+        !state.cps.has(selectedFocusCp)
+    ) {
+        selectedFocusCp = "";
+    }
+
+    const focusCpSearch = document.getElementById("focusCpSearch");
+
+    if (focusCpSearch) {
+        focusCpSearch.value = selectedFocusCp;
+    }
+
+    // 关键：
+    // restoreFilterState() 恢复 selectedFocusCp 后，
+    // 必须重新同步报告入口的 hidden / href。
+    syncSingleCpReportLink();
+
+    const options = document.getElementById("focusCpOptions");
+
+    if (options && !options.hidden) {
+        renderFocusCpOptions();
+    }
+
     drawFocusArea(rows);
 }
 
@@ -1770,4 +1860,9 @@ if (window.ResizeObserver) {
 }
 
 document.getElementById("dataCutoff").innerText = window.DASHBOARD_META?.data_cutoff || "未知";
+window.addEventListener("pageshow", () => {
+    if (selectedFocusCp) {
+        syncSingleCpReportLink();
+    }
+});
 loadArticlesFile();

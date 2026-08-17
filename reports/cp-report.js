@@ -107,3 +107,397 @@
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">05 · 创作者观察</span></div><p>${data.start} - ${data.end}</p></div><div class="facts author-facts">${authors}</div></section>
   <section class="end"><div class="actions"><a class="button secondary" href="index.html">查看全 CP 报告</a><a class="button" href="../index.html#focus">进入主看板</a></div><p class="method">ReadAWrite 有效作品 · ${data.start} - ${data.end} · 同链接去重 · 抓取时点快照</p><p class="created-by">Created by <strong>Atypical</strong> · With <strong>Codex</strong></p></section>`;
 })();
+
+/* =========================================================
+   CP SWITCHER
+   ========================================================= */
+
+(function initCpSwitcher() {
+    const trigger = document.getElementById("cpSwitcherTrigger");
+    const panel = document.getElementById("cpSwitcherPanel");
+    const search = document.getElementById("cpSwitcherSearch");
+    const currentLabel = document.getElementById("cpSwitcherCurrent");
+    const recentSection = document.getElementById("cpSwitcherRecentSection");
+    const recentContainer = document.getElementById("cpSwitcherRecent");
+    const allContainer = document.getElementById("cpSwitcherAll");
+    const empty = document.getElementById("cpSwitcherEmpty");
+
+    if (
+        !trigger ||
+        !panel ||
+        !search ||
+        !currentLabel ||
+        !recentContainer ||
+        !allContainer
+    ) {
+        return;
+    }
+
+    const RECENT_KEY = "cp-report-recent-v1";
+    const MAX_RECENT = 5;
+
+    const reportData =
+        window.CP_REPORT_DATA &&
+        typeof window.CP_REPORT_DATA === "object"
+            ? window.CP_REPORT_DATA
+            : {};
+
+    const cpNames = Object.keys(reportData).sort(
+        (a, b) =>
+            a.localeCompare(
+                b,
+                "en",
+                { sensitivity: "base" }
+            )
+    );
+
+    /*
+     * 当前 CP
+     * 支持：
+     * cp.html?cp=MyChan
+     * cp.html?cp=mychan
+     */
+    const params = new URLSearchParams(window.location.search);
+    const rawCp = (params.get("cp") || "").trim();
+
+    function resolveCp(value) {
+        if (!value) return null;
+
+        const normalized = String(value)
+            .trim()
+            .toLowerCase();
+
+        return (
+            cpNames.find(
+                cp => cp.toLowerCase() === normalized
+            ) || null
+        );
+    }
+
+    const currentCp =
+        resolveCp(rawCp) ||
+        resolveCp("LenaMiu") ||
+        cpNames[0] ||
+        "";
+
+    /*
+     * 同步：
+     * 1. 浏览器标题
+     * 2. meta description
+     * 3. 右上角当前 CP
+     */
+    function updatePageMeta(cp) {
+        if (!cp) return;
+
+        document.title =
+            `${cp} 创作趋势分析｜ReadAWrite`;
+
+        const description =
+            document.querySelector(
+                'meta[name="description"]'
+            );
+
+        if (description) {
+            description.content =
+                `${cp} ReadAWrite 同人创作趋势分析`;
+        }
+
+        currentLabel.textContent = cp;
+    }
+
+    updatePageMeta(currentCp);
+
+    /*
+     * 最近访问
+     */
+    function getRecentCps() {
+        try {
+            const saved = JSON.parse(
+                localStorage.getItem(RECENT_KEY)
+            );
+
+            if (!Array.isArray(saved)) {
+                return [];
+            }
+
+            return saved
+                .filter(cp => cpNames.includes(cp))
+                .slice(0, MAX_RECENT);
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveRecentCp(cp) {
+        if (!cp || !cpNames.includes(cp)) return;
+
+        const recent = getRecentCps()
+            .filter(item => item !== cp);
+
+        recent.unshift(cp);
+
+        try {
+            localStorage.setItem(
+                RECENT_KEY,
+                JSON.stringify(
+                    recent.slice(0, MAX_RECENT)
+                )
+            );
+        } catch (_) {}
+    }
+
+    saveRecentCp(currentCp);
+
+    /*
+     * 搜索匹配
+     */
+    function getMatches(query = "") {
+        const normalized = query
+            .trim()
+            .toLowerCase();
+
+        if (!normalized) {
+            return cpNames.slice();
+        }
+
+        return cpNames.filter(
+            cp =>
+                cp.toLowerCase()
+                    .includes(normalized)
+        );
+    }
+
+    /*
+     * 打开 / 关闭
+     */
+    function setSwitcherOpen(open) {
+        panel.hidden = !open;
+
+        trigger.setAttribute(
+            "aria-expanded",
+            String(open)
+        );
+
+        if (open) {
+            search.value = "";
+            renderSwitcher();
+
+            requestAnimationFrame(() => {
+                search.focus();
+            });
+        }
+    }
+
+    /*
+     * 跳转 CP
+     */
+    function goToCp(cp) {
+        if (!cp) return;
+
+        saveRecentCp(cp);
+
+        if (cp === currentCp) {
+            setSwitcherOpen(false);
+            return;
+        }
+
+        const url =
+            new URL(window.location.href);
+
+        url.searchParams.set("cp", cp);
+
+        window.location.href =
+            url.pathname +
+            "?" +
+            url.searchParams.toString();
+    }
+
+    /*
+     * 创建一个 CP 按钮
+     */
+    function createCpButton(cp) {
+        const button =
+            document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+            "cp-switcher-option";
+
+        if (cp === currentCp) {
+            button.classList.add("current");
+        }
+
+        const label =
+            document.createElement("span");
+
+        label.textContent = cp;
+
+        button.appendChild(label);
+
+        button.addEventListener(
+            "click",
+            () => goToCp(cp)
+        );
+
+        return button;
+    }
+
+    /*
+     * 渲染下拉内容
+     */
+    function renderSwitcher() {
+        const query =
+            search.value
+                .trim()
+                .toLowerCase();
+
+        const matches =
+            getMatches(query);
+
+        allContainer.replaceChildren();
+        recentContainer.replaceChildren();
+
+        /*
+         * 搜索状态：
+         * 隐藏最近访问，只显示搜索结果
+         */
+        if (query) {
+            if (recentSection) {
+                recentSection.hidden = true;
+            }
+
+            matches.forEach(cp => {
+                allContainer.appendChild(
+                    createCpButton(cp)
+                );
+            });
+
+            if (empty) {
+                empty.hidden =
+                    matches.length !== 0;
+            }
+
+            return;
+        }
+
+        /*
+         * 非搜索状态：
+         * 显示最近访问
+         */
+        const recent =
+            getRecentCps();
+
+        if (recentSection) {
+            recentSection.hidden =
+                recent.length === 0;
+        }
+
+        recent.forEach(cp => {
+            recentContainer.appendChild(
+                createCpButton(cp)
+            );
+        });
+
+        /*
+         * 全部 CP
+         */
+        cpNames.forEach(cp => {
+            allContainer.appendChild(
+                createCpButton(cp)
+            );
+        });
+
+        if (empty) {
+            empty.hidden = true;
+        }
+    }
+
+    /*
+     * 点击顶部按钮
+     */
+    trigger.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+
+            setSwitcherOpen(
+                panel.hidden
+            );
+        }
+    );
+
+    /*
+     * 输入搜索
+     */
+    search.addEventListener(
+        "input",
+        renderSwitcher
+    );
+
+    /*
+     * Enter：
+     * 直接进入第一个搜索结果
+     */
+    search.addEventListener(
+        "keydown",
+        event => {
+            if (event.key === "Enter") {
+                const firstMatch =
+                    getMatches(search.value)[0];
+
+                if (firstMatch) {
+                    event.preventDefault();
+                    goToCp(firstMatch);
+                }
+            }
+        }
+    );
+
+    /*
+     * 点击外部关闭
+     */
+    document.addEventListener(
+        "click",
+        event => {
+            if (
+                !event.target.closest(
+                    "#cpSwitcher"
+                )
+            ) {
+                setSwitcherOpen(false);
+            }
+        }
+    );
+
+    /*
+     * Esc 关闭
+     */
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key === "Escape" &&
+                !panel.hidden
+            ) {
+                setSwitcherOpen(false);
+                trigger.focus();
+            }
+        }
+    );
+
+    /*
+     * 防止点击面板时触发外部关闭
+     */
+    panel.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+        }
+    );
+
+    /*
+     * 首次渲染
+     */
+    renderSwitcher();
+})();

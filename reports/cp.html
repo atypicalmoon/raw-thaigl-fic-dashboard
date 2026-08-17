@@ -26,7 +26,7 @@
     .year i{background:linear-gradient(180deg,rgba(211,93,157,.13),rgba(159,11,96,.04))}.timeline-section .year{border-color:#eadfe2}.timeline-section .year strong,.timeline-section .year span{color:#8f7c83}.timeline-section .year b{color:#7c3157}.timeline-section .year:nth-child(3) b{color:#8d285c}.timeline-section .year i{background:#e7cfd9}.timeline-section .year:nth-child(3) i{background:#b96a91}
     .work:hover{border-color:#d9b7c7}.work-stat,.author-values span{background:#fdf7f8}.discovery-work .work-stats span{background:#fdf7f8;padding:4px 8px;border-radius:6px}.pre-event,.caution{background:#fbf5f6}.sequence{position:relative}.sequence div{position:relative}.sequence div:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:50%;z-index:2;color:#cbb7c0;font-size:10px;transform:translateY(-50%)}@media(max-width:760px){.sequence div::after{display:none}}
     .month-chart-wrap{width:100%;padding:8px 12px 2px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}.month-line-chart{display:block;width:100%;height:auto;max-height:226px;overflow:visible}.month-grid line{stroke:#f0e7e3;stroke-width:1}.month-line{fill:none;stroke:#7f2948;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.month-line.partial-line{stroke:#a1848e;stroke-dasharray:7 7}.month-point circle{fill:#fffaf8;stroke:#7f2948;stroke-width:3}.month-point.partial-point circle{stroke:#a1848e;stroke-dasharray:2 2}.month-line-chart text{text-anchor:middle;font-family:Inter,"Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif}.month-value{fill:var(--text);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}.month-label{fill:var(--sub);font-size:10px}.month-point.partial-point .month-label{fill:#8f7780}
-    @media(max-width:760px){.month-chart-wrap{padding:5px 4px 0}.month-line-chart{min-height:160px}.month-value{font-size:11px}.month-label{font-size:9px}}
+    @media(max-width:760px){.month-chart-wrap{padding:5px 4px 0px}.month-line-chart{min-height:160px}.month-value{font-size:14px}.month-label{font-size:12px}}
     .compact-section{padding-block:38px}.compact-heading{align-items:center;margin-bottom:13px}.compact-heading .kicker{margin:0}.compact-heading p{margin:0}@media(max-width:760px){.compact-section{padding-block:30px}.compact-heading{display:flex;align-items:center;gap:10px;margin-bottom:11px}.compact-heading p{margin:0 0 0 auto;max-width:58%;overflow:hidden;font-size:9px;text-overflow:ellipsis;white-space:nowrap}}
     .compact-hero{padding-block:34px 28px}.compact-hero .report-title{margin:0 0 8px}.compact-hero .kpis{margin-top:21px}.compact-hero .report-title{align-items:baseline;flex-direction:row;gap:11px}.compact-hero .report-title .cp-name{min-width:0;overflow:hidden;font-size:clamp(32px,5vw,48px);text-overflow:ellipsis;white-space:nowrap}.compact-hero .report-title small{flex:0 0 auto;color:var(--sub);font-size:14px;font-weight:500}@media(max-width:760px){.compact-hero{padding:25px 18px 22px}.compact-hero .report-title{align-items:baseline;flex-direction:row;gap:8px;margin-bottom:6px}.compact-hero .report-title .cp-name{font-size:30px}.compact-hero .report-title small{font-size:11px}.compact-hero .lead{overflow:hidden;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.compact-hero .kpis{margin-top:17px}}
     .compact-work{position:relative;padding:14px 16px}.compact-work .work-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.compact-work .work-top em{max-width:calc(100% - 22px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.compact-work .open{margin:0;color:var(--wine);font-size:11px}.compact-work h3{margin:6px 0 3px}.compact-work p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.inline-stats{display:flex;align-items:baseline;gap:7px;margin-top:8px;color:var(--muted);font-size:10px}.inline-stats b{color:var(--text);font-size:14px}.inline-stats i{color:var(--line);font-style:normal}.compact-author{padding:14px 16px}.author-top{display:flex;align-items:center;justify-content:space-between;gap:9px}.compact-author .fact-label{flex:0 0 auto;margin:0}.compact-author .author-name{font-size:16px}.author-inline{margin:7px 0 8px;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.author-inline b{display:inline;color:var(--text);font-size:10px}.compact-author .author-meter{display:grid;gap:5px;margin:0}.compact-author .author-meter span{display:grid;grid-template-columns:28px minmax(0,1fr) 24px;align-items:center;gap:7px;font-size:8px}.compact-author .author-meter em{color:var(--sub);font-style:normal}.compact-author .author-meter i{height:3px;border-radius:9px;background:linear-gradient(90deg,var(--wine) var(--p),var(--soft) var(--p))}.compact-author .author-meter b{font-size:8px;text-align:right}.compact-author .author-meter span::after{display:none}@media(max-width:760px){.compact-work,.compact-author{padding:12px 13px}.compact-work h3{font-size:14px}.inline-stats{margin-top:6px}.compact-author .author-name{font-size:15px}}
@@ -38,7 +38,122 @@
   </style>
 </head>
 <body>
-  <header class="top shell report-top"><a class="report-brand" href="../index.html" aria-label="进入 ReadAWrite 主看板"><i>GL</i><span><strong>ReadAWrite</strong><small>THAI GL FANFICTION DATA</small></span></a><nav class="report-nav" aria-label="页面导航"><a href="index.html">全 CP 报告</a><a href="../index.html#focus">主看板</a></nav></header>
+  <header class="top shell report-top">
+  <a
+    class="report-brand"
+    href="../index.html"
+    aria-label="进入 ReadAWrite 主看板"
+  >
+    <i>GL</i>
+
+    <span>
+      <strong>ReadAWrite</strong>
+      <small>THAI GL FANFICTION DATA</small>
+    </span>
+  </a>
+
+  <div class="report-top-right">
+
+    <!-- CP 切换器 -->
+    <div class="cp-switcher" id="cpSwitcher">
+
+      <button
+        class="cp-switcher-trigger"
+        id="cpSwitcherTrigger"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="cpSwitcherPanel"
+      >
+        <span class="cp-switcher-label">当前 CP</span>
+
+        <strong id="cpSwitcherCurrent">
+          LenaMiu
+        </strong>
+
+        <span
+          class="cp-switcher-arrow"
+          aria-hidden="true"
+        >
+          ▾
+        </span>
+      </button>
+
+      <div
+        class="cp-switcher-panel"
+        id="cpSwitcherPanel"
+        role="dialog"
+        aria-label="切换 CP"
+        hidden
+      >
+        <div class="cp-switcher-search-wrap">
+          <span aria-hidden="true">⌕</span>
+
+          <input
+            id="cpSwitcherSearch"
+            class="cp-switcher-search"
+            type="search"
+            placeholder="搜索 CP"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="搜索 CP"
+          >
+        </div>
+
+        <div
+          class="cp-switcher-empty"
+          id="cpSwitcherEmpty"
+          hidden
+        >
+          没有匹配的 CP
+        </div>
+
+        <!-- 最近访问 -->
+        <section
+          class="cp-switcher-section"
+          id="cpSwitcherRecentSection"
+          hidden
+        >
+          <div class="cp-switcher-section-title">
+            最近访问
+          </div>
+
+          <div
+            class="cp-switcher-list"
+            id="cpSwitcherRecent"
+          ></div>
+        </section>
+
+        <!-- 全部 CP -->
+        <section class="cp-switcher-section">
+          <div class="cp-switcher-section-title">
+            全部 CP
+          </div>
+
+          <div
+            class="cp-switcher-list"
+            id="cpSwitcherAll"
+          ></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 普通导航 -->
+    <nav
+      class="report-nav"
+      aria-label="页面导航"
+    >
+      <a href="index.html">
+        全 CP 报告
+      </a>
+
+      <a href="../index.html#focus">
+        主看板
+      </a>
+    </nav>
+
+  </div>
+</header>
   <main class="shell">
     <section class="hero"><span class="eyebrow">数据截至 2026-08-10</span><h1 class="report-title"><span class="cp-name">LenaMiu</span><small>创作趋势分析</small></h1><p class="lead">完整记录区间：2024-12-20 至 2026-08-10 · 按作品首次发布时间统计</p><div class="kpis"><div class="kpi"><b>522</b><span>累计有效作品</span></div><div class="kpi"><b>320</b><span>累计创作者</span></div><div class="kpi"><b>388</b><span>2026 年新增</span></div><div class="kpi"><b>18</b><span>有新作月份</span></div></div></section>
     <section class="section timeline-section"><div class="heading"><div><span class="kicker">01 · 完整时间轴</span><h2>2025 年第四季度起记录明显增加</h2></div><p>2026 为截至 8 月 10 日的未完整年度。</p></div><div class="year-grid"><article class="year"><i style="--h:1%"></i><strong>2024</strong><b>1</b><span>12月首次记录</span></article><article class="year"><i style="--h:34%"></i><strong>2025</strong><b>133</b><span>10-12月新增112篇</span></article><article class="year"><i style="--h:100%"></i><strong>2026</strong><b>388</b><span>截至8月10日</span></article></div></section>
@@ -67,6 +182,450 @@
     /* 04 · 作品发现：与创作者卡一致的紧凑信息层级。 */
     .compact-section .works{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.compact-section .discovery-work{display:block;min-width:0;padding:14px 16px}.discovery-work .work-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:baseline;gap:7px}.discovery-work .work-head em{min-width:0;max-width:86px;overflow:hidden;padding:2px 6px;border-radius:4px;background:#fff3f4;color:#b94d5f;font-size:8px;font-style:normal;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.discovery-work .work-head h3{display:block;min-width:0;min-height:0;margin:0;overflow:hidden;font-size:14px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.discovery-work .work-head i{color:#b94d5f;font-size:11px;font-style:normal;line-height:1}.discovery-work .work-meta{margin:6px 0 0;overflow:hidden;color:var(--muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}.discovery-work .work-stats{display:flex;align-items:baseline;gap:10px;margin-top:9px;color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}.discovery-work .work-stats span{min-width:0;white-space:nowrap}.discovery-work .work-stats span+span{padding-left:10px;border-left:0}.discovery-work .work-stats b{margin-right:3px;color:var(--text);font-size:13px}@media(max-width:760px){.compact-section .works{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.compact-section .discovery-work{padding:11px 12px}.discovery-work .work-head{gap:6px}.discovery-work .work-head em{max-width:92px}.discovery-work .work-head h3{font-size:13px}.discovery-work .work-meta{margin-top:5px}.discovery-work .work-stats{margin-top:7px}.discovery-work .work-stats b{font-size:12px}}@media(max-width:350px){.discovery-work .work-head em{max-width:72px}.discovery-work .work-stats{gap:7px}.discovery-work .work-stats span+span{padding-left:7px}}
     .compact-hero .report-title .cp-name {line-height: 1.25 !important;overflow: visible !important;white-space: normal !important;word-break: break-word !important;}
+    
+    /* =========================================================
+   CP SWITCHER · 与主看板统一风格
+   ========================================================= */
+
+.report-top-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.cp-switcher{
+  position:relative;
+  z-index:60;
+}
+
+/* 当前 CP 文案 */
+.cp-switcher-label{
+  flex:0 0 auto;
+  color:var(--sub);
+  font-size:7px;
+  font-weight:600;
+  letter-spacing:.03em;
+  white-space:nowrap;
+}
+
+/* 当前 CP 按钮 */
+.cp-switcher-trigger{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:148px;
+  max-width:210px;
+  height:30px;
+  padding:0 9px;
+
+  border:1px solid var(--line);
+  border-radius:7px;
+
+  background:#fff;
+  color:var(--text);
+
+  font:inherit;
+  cursor:pointer;
+
+  transition:
+    border-color .14s ease,
+    background .14s ease,
+    box-shadow .14s ease;
+}
+
+.cp-switcher-trigger:hover{
+  border-color:#d8b7bd;
+  background:#fffafb;
+}
+
+.cp-switcher-trigger:focus-visible{
+  outline:none;
+  border-color:#b94d5f;
+  box-shadow:0 0 0 2px rgba(185,77,95,.08);
+}
+
+/* 当前 CP 名称 */
+.cp-switcher-trigger strong{
+  flex:1 1 auto;
+  min-width:0;
+
+  overflow:hidden;
+
+  color:var(--wine);
+
+  font-size:10px;
+  font-weight:700;
+
+  text-align:left;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* 下拉箭头 */
+.cp-switcher-arrow{
+  flex:0 0 auto;
+  color:var(--sub);
+  font-size:8px;
+  transition:transform .14s ease;
+}
+
+.cp-switcher-trigger[aria-expanded="true"] .cp-switcher-arrow{
+  transform:rotate(180deg);
+}
+
+
+/* =========================================================
+   下拉弹层
+   ========================================================= */
+
+.cp-switcher-panel{
+  position:absolute;
+  top:calc(100% + 6px);
+  right:0;
+
+  width:250px;
+  padding:8px;
+
+  border:1px solid var(--line);
+  border-radius:9px;
+
+  background:#fff;
+
+  box-shadow:
+    0 12px 30px rgba(91,40,61,.09);
+
+  overflow:hidden;
+}
+
+.cp-switcher-panel[hidden]{
+  display:none !important;
+}
+
+
+/* =========================================================
+   搜索框
+   ========================================================= */
+
+.cp-switcher-search-wrap{
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  height:30px;
+  padding:0 8px;
+
+  border:1px solid var(--line);
+  border-radius:6px;
+
+  background:#fff;
+}
+
+.cp-switcher-search-wrap>span{
+  flex:0 0 auto;
+  color:var(--sub);
+  font-size:11px;
+}
+
+.cp-switcher-search{
+  width:100%;
+  min-width:0;
+
+  padding:0;
+  border:0;
+  outline:0;
+
+  background:transparent;
+  color:var(--text);
+
+  font:inherit;
+  font-size:10px;
+}
+
+.cp-switcher-search::placeholder{
+  color:var(--sub);
+}
+
+
+/* =========================================================
+   分组
+   ========================================================= */
+
+.cp-switcher-section{
+  margin-top:8px;
+}
+
+.cp-switcher-section+
+.cp-switcher-section{
+  padding-top:7px;
+  border-top:1px solid #f3e6e7;
+}
+
+.cp-switcher-section-title{
+  margin:0 5px 4px;
+
+  color:var(--sub);
+
+  font-size:8px;
+  font-weight:650;
+  letter-spacing:.04em;
+}
+
+
+/* =========================================================
+   最近访问
+   ========================================================= */
+
+#cpSwitcherRecent{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+
+#cpSwitcherRecent .cp-switcher-option{
+  width:auto;
+  max-width:110px;
+  min-height:0;
+
+  padding:4px 7px;
+
+  border:1px solid #f0dfe1;
+  border-radius:6px;
+
+  background:#fffafa;
+
+  font-size:8px;
+}
+
+#cpSwitcherRecent .cp-switcher-option:hover,
+#cpSwitcherRecent .cp-switcher-option:focus-visible{
+  border-color:#dfbcc3;
+  background:#fff2f4;
+}
+
+#cpSwitcherRecent .cp-switcher-option.current{
+  border-color:#e5bdc4;
+  background:#fff0f2;
+}
+
+#cpSwitcherRecent .cp-switcher-option.current::after{
+  display:none;
+}
+
+
+/* =========================================================
+   全部 CP
+   约显示 6 个，其余滚动
+   ========================================================= */
+
+#cpSwitcherAll{
+  display:grid;
+  gap:2px;
+
+  max-height:198px;
+
+  overflow-y:auto;
+  overscroll-behavior:contain;
+
+  padding-right:2px;
+
+  scrollbar-width:thin;
+  scrollbar-color:#dec8cc transparent;
+}
+
+
+/* =========================================================
+   单个 CP 项目
+   ========================================================= */
+
+.cp-switcher-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+
+  width:100%;
+  min-height:31px;
+
+  padding:6px 8px;
+
+  border:0;
+  border-radius:6px;
+
+  background:transparent;
+  color:var(--text);
+
+  font:inherit;
+  font-size:9px;
+  text-align:left;
+
+  cursor:pointer;
+
+  transition:
+    color .12s ease,
+    background .12s ease;
+}
+
+.cp-switcher-option:hover,
+.cp-switcher-option:focus-visible{
+  outline:none;
+  background:#fff3f4;
+  color:#b94d5f;
+}
+
+.cp-switcher-option.current{
+  background:#fff0f2;
+  color:#b94d5f;
+  font-weight:650;
+}
+
+.cp-switcher-option span{
+  min-width:0;
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.cp-switcher-option.current::after{
+  content:"当前";
+
+  flex:0 0 auto;
+
+  color:#bd818b;
+
+  font-size:7px;
+  font-weight:600;
+}
+
+
+/* =========================================================
+   无匹配结果
+   ========================================================= */
+
+.cp-switcher-empty{
+  padding:18px 8px 12px;
+
+  color:var(--sub);
+
+  font-size:9px;
+  text-align:center;
+}
+
+
+/* =========================================================
+   滚动条
+   ========================================================= */
+
+#cpSwitcherAll::-webkit-scrollbar{
+  width:5px;
+}
+
+#cpSwitcherAll::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+#cpSwitcherAll::-webkit-scrollbar-thumb{
+  border-radius:999px;
+  background:#dec8cc;
+}
+
+#cpSwitcherAll::-webkit-scrollbar-thumb:hover{
+  background:#cfaeb5;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media(max-width:760px){
+
+  .report-top{
+    gap:8px;
+  }
+
+  .report-top-right{
+    gap:7px;
+  }
+
+  .cp-switcher-trigger{
+    min-width:122px;
+    max-width:155px;
+
+    height:28px;
+
+    padding-inline:8px;
+
+    gap:5px;
+  }
+
+  .cp-switcher-label{
+    font-size:6px;
+  }
+
+  .cp-switcher-trigger strong{
+    font-size:9px;
+  }
+
+  .cp-switcher-panel{
+    position:fixed;
+
+    top:55px;
+    right:14px;
+    left:14px;
+
+    width:auto;
+
+    padding:8px;
+
+    border-radius:9px;
+  }
+
+  #cpSwitcherAll{
+    max-height:190px;
+  }
+
+  .report-nav{
+    gap:7px;
+  }
+
+  .report-nav a{
+    font-size:8px;
+    white-space:nowrap;
+  }
+}
+
+
+/* =========================================================
+   更窄手机
+   ========================================================= */
+
+@media(max-width:430px){
+
+  .report-brand small{
+    display:none;
+  }
+
+  .report-top-right{
+    flex:1 1 auto;
+    justify-content:flex-end;
+  }
+
+  /* 小屏隐藏“全 CP 报告”，保留主看板 */
+  .report-nav a:first-child{
+    display:none;
+  }
+
+  .cp-switcher-trigger{
+    min-width:116px;
+    max-width:138px;
+  }
+
+  .cp-switcher-label{
+    font-size:6px;
+  }
+}
   </style>
   <script src="cp-report-data.js?v=20260811d"></script>
   <script src="cp-report.js?v=20260811g"></script>
