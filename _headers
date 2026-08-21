@@ -22,3 +22,18 @@
 
 /reports/cp-report.js
   Cache-Control: public, max-age=31556952, immutable
+
+/reports/report-catalog.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/reports/data/*
+  Cache-Control: public, max-age=31556952, immutable
+
+/reports/report.js
+  Cache-Control: public, max-age=31556952, immutable
+
+/reports/report.css
+  Cache-Control: public, max-age=31556952, immutable
+
+/reports/report-index.js
+  Cache-Control: public, max-age=31556952, immutable

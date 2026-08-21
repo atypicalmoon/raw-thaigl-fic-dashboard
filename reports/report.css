@@ -74,20 +74,17 @@ a{color:inherit}
 .chart-card{min-width:0;padding:14px 16px 12px}
 .change-chart-scroll{overflow-x:auto}
 .change-chart{display:block;width:100%;min-width:650px;height:auto}
-.chart-grid line{stroke:#f1dfde;stroke-width:1}
+.chart-grid line{stroke:#f2e5e3;stroke-width:1;opacity:.72}
 .chart-grid text,.axis-title{fill:var(--quiet);font-family:inherit;font-size:10px}
 .axis-title{font-size:11px;font-weight:700}
 .chart-diagonal{stroke:#bda9ad;stroke-width:1.5;stroke-dasharray:7 6}
-.chart-point circle{stroke-width:1.8;opacity:.76;vector-effect:non-scaling-stroke;transition:opacity .16s ease,stroke-width .16s ease}
+.chart-point circle{stroke-width:1.6;opacity:.68;vector-effect:non-scaling-stroke;transition:opacity .16s ease,stroke-width .16s ease}
 .chart-point.rise circle{fill:var(--rise);stroke:#8b2f4c}
 .chart-point.fall circle{fill:var(--fall);stroke:#4f6474}
 .chart-point.steady circle{fill:#fffaf8;stroke:var(--steady);stroke-width:2.4}
 .chart-point:hover circle{opacity:1;stroke:var(--ink);stroke-width:2.5}
-.point-leader{stroke-width:1;stroke-dasharray:2 3;opacity:.7;vector-effect:non-scaling-stroke}
-.chart-point.rise .point-leader{stroke:#8b2f4c}
-.chart-point.fall .point-leader{stroke:#4f6474}
-.chart-point.steady .point-leader{stroke:var(--steady)}
-.point-label{fill:var(--ink);font-family:inherit;font-size:11px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.chart-point{cursor:pointer;outline:none}
+.chart-point:focus circle{opacity:1;stroke:var(--ink);stroke-width:2.5}
 .chart-legend{display:flex;align-items:center;flex-wrap:wrap;gap:9px 16px;padding:10px 4px 0;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
 .chart-legend span::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%}
 .chart-legend .rise::before{background:var(--rise)}
@@ -95,6 +92,15 @@ a{color:inherit}
 .chart-legend .steady::before{border:1px solid var(--steady);background:#fffaf8}
 .chart-legend i{margin-left:auto;color:var(--quiet);font-style:normal}
 .mobile-chart-hint{display:none}
+.chart-selection{display:grid;grid-template-columns:8px auto minmax(0,1fr) auto;align-items:center;gap:9px;margin:10px 4px 2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.chart-selection[hidden]{display:none}
+.chart-selection i{width:8px;height:8px;border-radius:50%;background:var(--steady)}
+.chart-selection.rise i{background:var(--rise)}
+.chart-selection.fall i{background:var(--fall)}
+.chart-selection.steady i{border:1px solid var(--steady);background:#fffaf8}
+.chart-selection b{font-size:11px}
+.chart-selection span{color:var(--muted);font-size:10px}
+.chart-selection a{color:var(--wine);font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap}
 .change-notes{padding:0 18px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.6)}
 .change-notes dl{display:grid;grid-template-columns:repeat(3,1fr);margin:0}
 .change-notes dl div{display:flex;align-items:baseline;justify-content:center;gap:9px;padding:13px 17px;border-right:1px solid var(--line)}
@@ -164,7 +170,7 @@ a{color:inherit}
 .event-details[open]>summary,.data-details[open]>summary{border-bottom:1px solid var(--line)}
 .event-details[open]>summary em::after,.data-details[open]>summary em::after{content:"↑"}
 .event-list{padding:0 20px}
-.event-row{display:grid;grid-template-columns:85px minmax(0,1fr) auto 55px;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid #f1dfde}
+.event-row{display:grid;grid-template-columns:85px minmax(0,1fr) auto;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid #f1dfde}
 .event-row:last-child{border-bottom:0}
 .event-row time{color:var(--wine);font-size:10px;font-weight:700}
 .event-row h3{margin:0;font-size:12px}
@@ -174,7 +180,6 @@ a{color:inherit}
 .event-row dl div{text-align:right}
 .event-row dt{color:var(--quiet);font-size:9px}
 .event-row dd{margin:2px 0 0;font-size:11px;font-weight:700}
-.source-link{color:var(--wine);font-size:10px;text-decoration:none}
 .empty-note{margin:14px 0 0;color:var(--quiet);font-size:11px}
 
 .data-section{padding-block:38px}
@@ -268,9 +273,12 @@ tbody tr:hover{background:#fffafa}
   .month-ribbon span{font-size:9px}
   .chart-card{padding:10px 10px 12px}
   .change-chart-scroll{margin-inline:-2px;padding-bottom:5px;overscroll-behavior-inline:contain}
-  .change-chart{min-width:680px}
+  .change-chart{min-width:560px}
   .chart-legend i{flex-basis:100%;margin-left:0}
   .mobile-chart-hint{display:block;margin:7px 2px 0;color:var(--quiet);font-size:9px;text-align:center}
+  .chart-selection{grid-template-columns:8px minmax(0,1fr) auto;gap:7px;margin-top:8px}
+  .chart-selection b{min-width:0;overflow-wrap:anywhere}
+  .chart-selection span{grid-column:2/-1}
   .change-notes{padding:0 13px}
   .change-notes dl{grid-template-columns:1fr}
   .change-notes dl div{justify-content:space-between;padding:11px 3px;border-right:0;border-bottom:1px solid var(--line)}
@@ -286,7 +294,6 @@ tbody tr:hover{background:#fffafa}
   .event-row{grid-template-columns:72px minmax(0,1fr);gap:10px}
   .event-row dl{grid-column:2;justify-content:flex-start}
   .event-row dl div{text-align:left}
-  .source-link{grid-column:2}
   .data-section{padding-block:30px}
   .data-details-body{padding:14px}
   .table-tools{display:grid}

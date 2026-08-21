@@ -1911,7 +1911,7 @@ function persistDailySelection(selection) {
 
 function drawDailyCp() {
     const eligible = dedupeByLink(allParsedRows.filter(d =>
-        (d.status || "").toLowerCase() === "ok" && d.publish_date_obj && d.url && d.url !== "#"
+        (d.status || "").toLowerCase() === "ok" && d.publish_date_obj && d.detail_key
     ));
     if (!eligible.length) return;
     if (!dailySelection) dailySelection = restoreDailySelection(eligible);

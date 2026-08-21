@@ -33,51 +33,24 @@
 
   function renderChangeChart(report){
     const rows=report.cps.filter(row=>row.works>0||row.previous_works>0);
-    const width=820,height=440,left=68,right=30,top=32,bottom=58;
+    const width=820,height=320,left=62,right=20,top=22,bottom=48;
     const plotWidth=width-left-right,plotHeight=height-top-bottom;
-    const maxValue=Math.max(10,...rows.flatMap(row=>[row.works,row.previous_works]));
+    const rawMax=Math.max(10,...rows.flatMap(row=>[row.works,row.previous_works]));
+    const maxValue=[10,25,50,100,250,500,1000,2000,5000,10000].find(value=>value>=rawMax)||rawMax;
     const scale=value=>Math.log1p(Math.max(0,value))/Math.log1p(maxValue);
     const x=value=>left+scale(value)*plotWidth;
     const y=value=>top+(1-scale(value))*plotHeight;
     const maxAuthors=Math.max(1,...rows.map(row=>row.authors));
-    const tickPool=[0,5,10,25,50,100,250,500,1000,2000,5000];
+    const tickPool=[0,10,50,100,250,500,1000,2000,5000,10000];
     const ticks=tickPool.filter(value=>value<=maxValue);
-    if(ticks[ticks.length-1]!==maxValue)ticks.push(maxValue);
-    const labels=new Set([
-      ...[...rows].sort((a,b)=>b.works-a.works||a.cp.localeCompare(b.cp)).slice(0,5),
-      ...[...rows].sort((a,b)=>Math.abs(b.work_delta)-Math.abs(a.work_delta)||a.cp.localeCompare(b.cp)).slice(0,3),
-    ].map(row=>row.cp));
-    const pointRows=rows.map(row=>({
-      row,
-      px:x(row.previous_works),
-      py:y(row.works),
-      radius:4+Math.sqrt(row.authors/maxAuthors)*10,
-    }));
-    const labelPositions=new Map();
-    const minLabelY=top+9,maxLabelY=height-bottom-7,labelGap=17;
-    ["start","end"].forEach(anchor=>{
-      const items=pointRows.filter(item=>labels.has(item.row.cp)&&(item.px>left+plotWidth*.67?"end":"start")===anchor).sort((a,b)=>a.py-b.py);
-      const positions=items.map(item=>Math.max(minLabelY,Math.min(maxLabelY,item.py)));
-      for(let index=1;index<positions.length;index+=1)positions[index]=Math.max(positions[index],positions[index-1]+labelGap);
-      if(positions.length&&positions.at(-1)>maxLabelY){
-        positions[positions.length-1]=maxLabelY;
-        for(let index=positions.length-2;index>=0;index-=1)positions[index]=Math.min(positions[index],positions[index+1]-labelGap);
-      }
-      items.forEach((item,index)=>labelPositions.set(item.row.cp,{
-        anchor,
-        x:anchor==="end"?item.px-item.radius-7:item.px+item.radius+7,
-        y:positions[index],
-      }));
-    });
     const grid=ticks.map(value=>`<g class="chart-grid"><line x1="${x(value)}" y1="${top}" x2="${x(value)}" y2="${height-bottom}"></line><line x1="${left}" y1="${y(value)}" x2="${width-right}" y2="${y(value)}"></line><text x="${x(value)}" y="${height-bottom+24}" text-anchor="middle">${fmt(value)}</text><text x="${left-12}" y="${y(value)+4}" text-anchor="end">${fmt(value)}</text></g>`).join("");
-    const points=pointRows.map(({row,px,py,radius})=>{
+    const points=rows.map(row=>{
       const state=row.work_delta>0?"rise":row.work_delta<0?"fall":"steady";
-      const position=labelPositions.get(row.cp);
-      const label=position?`<line class="point-leader" x1="${px}" y1="${py}" x2="${position.x+(position.anchor==="end"?4:-4)}" y2="${position.y-3}"></line><text class="point-label" x="${position.x}" y="${position.y}" text-anchor="${position.anchor}">${esc(row.cp)}</text>`:"";
+      const radius=3.5+Math.sqrt(row.authors/maxAuthors)*7;
       const aria=`${row.cp}：同期 ${row.previous_works} 篇，本期 ${row.works} 篇，${row.authors} 位作者`;
-      return `<a href="${cpLink(row.cp)}" aria-label="${esc(aria)}"><g class="chart-point ${state}"><circle cx="${px}" cy="${py}" r="${radius}"><title>${esc(aria)}</title></circle>${label}</g></a>`;
+      return `<g class="chart-point ${state}" role="button" tabindex="0" aria-label="${esc(aria)}" data-cp="${esc(row.cp)}" data-current="${row.works}" data-previous="${row.previous_works}" data-change="${row.work_delta}" data-authors="${row.authors}" data-state="${state}"><circle cx="${x(row.previous_works)}" cy="${y(row.works)}" r="${radius}"><title>${esc(aria)}</title></circle></g>`;
     }).join("");
-    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">横轴是去年同期作品数，纵轴是本期作品数。对角线上方表示增加，下方表示减少。圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-8}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="18" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 18 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div><p class="mobile-chart-hint">左右滑动查看完整星图</p>`;
+    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">横轴是去年同期作品数，纵轴是本期作品数。对角线上方表示增加，下方表示减少。圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-7}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="17" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 17 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div><p class="mobile-chart-hint">左右滑动并点击散点</p><div class="chart-selection" id="changeSelection" hidden></div>`;
   }
 
   function render(report){
@@ -119,7 +92,7 @@
     }).join("");
 
     const topWork=(label,work,metric)=>`<a class="work-card" href="${esc(work.link)}" target="_blank" rel="noopener"><span>${label}</span><h3 title="${esc(work.title)}">${esc(work.title)}</h3><p>${esc(work.author)} · <b>${esc(work.cp)}</b> · ${esc(work.date)}</p><strong>${metric}</strong><small>${fmt(work.likes)} 赞 · ${fmt(work.views)} 阅读 · ${fmt(work.chapters)} 章</small><em>打开作品 ↗</em></a>`;
-    const events=report.events.map(event=>`<article class="event-row"><time>${esc(event.date)}</time><div><h3><a href="${cpLink(event.cp)}">${esc(event.cp)}</a> · ${esc(event.title_zh||event.title_original||"未命名事件")}</h3><p>${esc(event.title_original)}${event.note?` · ${esc(event.note)}`:""}</p></div><dl><div><dt>此前 30 日</dt><dd>${fmt(event.before_30d)}</dd></div><div><dt>此后 ${event.after_days} 日</dt><dd>${fmt(event.after_30d)}</dd></div><div><dt>变化</dt><dd>${signed(event.change)}</dd></div></dl>${event.source_url?`<a class="source-link" href="${esc(event.source_url)}" target="_blank" rel="noopener">来源 ↗</a>`:""}</article>`).join("");
+    const eventMarkup=()=>report.events.map(event=>`<article class="event-row"><time>${esc(event.date)}</time><div><h3><a href="${cpLink(event.cp)}">${esc(event.cp)}</a> · ${esc(event.title_zh||event.title_original||"未命名事件")}</h3><p>${esc(event.title_original)}${event.note?` · ${esc(event.note)}`:""}</p></div><dl><div><dt>此前 30 日</dt><dd>${fmt(event.before_30d)}</dd></div><div><dt>此后 ${event.after_days} 日</dt><dd>${fmt(event.after_30d)}</dd></div><div><dt>变化</dt><dd>${signed(event.change)}</dd></div></dl></article>`).join("");
 
     app.innerHTML=`
       <section class="report-hero">
@@ -138,7 +111,7 @@
 
       <section class="report-section"><div class="section-heading"><div><p class="section-label">整体结构</p><h2>创作集中在哪里</h2></div><p>条形长度 = 本档作品占比</p></div><p class="structure-insight"><strong>${hundredPlus.length} 个 CP</strong> 本期达到 100 篇以上，合计贡献 <strong>${fmt(hundredPlusShare)}%</strong> 的作品；其余 ${longTail.length} 个活跃 CP 合计占 ${fmt(100-hundredPlusShare)}%。</p><div class="band-list">${report.size_bands.map((row,index)=>{const members=bandMembers(row);return `<details class="band-row"><summary><span>${String(index+1).padStart(2,'0')}</span><h3>${esc(row.label)}</h3><div class="band-bar"><i style="width:${row.work_share}%"></i></div><b>${fmt(row.cps)} 个 CP</b><small>${fmt(row.works)} 篇 · ${fmt(row.work_share)}%</small><em>名单</em></summary><div class="band-members">${members.map(member=>`<a href="${cpLink(member.cp)}"><span>${esc(member.cp)}</span><small>${fmt(member.works)} 篇</small></a>`).join("")}</div></details>`}).join("")}</div></section>
 
-      <section class="report-section"><div class="section-heading"><div><p class="section-label">事件对照</p><h2>已核实事件</h2></div><p>事件前后作品量对照，不代表因果。</p></div>${events?`<details class="event-details"><summary><span><b>${report.events.length} 条事件</b><small>前后 30 日作品量</small></span><em>展开</em></summary><div class="event-list">${events}</div></details>`:'<p class="empty-note">本期没有日期精确且已核实的事件记录。</p>'}</section>
+      <section class="report-section"><div class="section-heading"><div><p class="section-label">事件对照</p><h2>已核实事件</h2></div><p>事件前后作品量对照，不代表因果。</p></div>${report.events.length?`<details class="event-details" id="eventDetails"><summary><span><b>${report.events.length} 条事件</b><small>前后 30 日作品量</small></span><em>展开</em></summary><div class="event-list" id="eventList"></div></details>`:'<p class="empty-note">本期没有日期精确且已核实的事件记录。</p>'}</section>
 
       <section class="report-section data-section"><details class="data-details"><summary><span><b>全部 CP 数据</b><small>搜索、排序与核对</small></span><em>${report.cps.length} 个 CP</em></summary><div class="data-details-body"><div class="table-tools"><input id="cpSearch" type="search" placeholder="搜索 CP 或当前归类" aria-label="搜索 CP 或当前归类"><select id="cpSort" aria-label="选择排序指标"><option value="works">按作品数排序</option><option value="authors">按作者数排序</option><option value="work_delta">按同期增量排序</option><option value="growth_pct">按同期增长率排序</option><option value="median_likes">按点赞中位数排序</option><option value="median_views">按阅读中位数排序</option><option value="completion_rate">按完结率排序</option><option value="cp">按 CP 名称排序</option></select></div><p class="table-count" id="tableCount"></p><div class="table-scroll"><table><thead><tr><th>CP</th><th>当前归类</th><th>作品</th><th>作者</th><th>活跃月</th><th>同期作品</th><th>增量</th><th>增长率</th><th>点赞中位数</th><th>阅读中位数</th><th>完结率</th></tr></thead><tbody id="cpTableBody"></tbody></table></div></div></details></section>
 
@@ -148,6 +121,8 @@
     const search=document.getElementById("cpSearch");
     const sort=document.getElementById("cpSort");
     const count=document.getElementById("tableCount");
+    const dataDetails=document.querySelector(".data-details");
+    let tableRendered=false;
     const drawTable=()=>{
       const term=search.value.trim().toLocaleLowerCase();
       const key=sort.value;
@@ -157,6 +132,31 @@
     };
     search.addEventListener("input",drawTable);
     sort.addEventListener("change",drawTable);
-    drawTable();
+    dataDetails.addEventListener("toggle",()=>{
+      if(dataDetails.open&&!tableRendered){tableRendered=true;drawTable()}
+    });
+    const eventDetails=document.getElementById("eventDetails");
+    if(eventDetails)eventDetails.addEventListener("toggle",()=>{
+      if(eventDetails.open&&!eventDetails.dataset.rendered){
+        document.getElementById("eventList").innerHTML=eventMarkup();
+        eventDetails.dataset.rendered="true";
+      }
+    });
+    const changeChart=document.querySelector(".change-chart");
+    const changeSelection=document.getElementById("changeSelection");
+    const showPoint=point=>{
+      if(!point)return;
+      const change=Number(point.dataset.change);
+      changeSelection.hidden=false;
+      changeSelection.className=`chart-selection ${point.dataset.state}`;
+      changeSelection.innerHTML=`<i></i><b>${esc(point.dataset.cp)}</b><span>本期 ${fmt(point.dataset.current)} 篇 · 同期 ${fmt(point.dataset.previous)} 篇 · ${signed(change)} · ${fmt(point.dataset.authors)} 位作者</span><a href="${cpLink(point.dataset.cp)}">查看单 CP →</a>`;
+    };
+    changeChart.addEventListener("pointerover",event=>showPoint(event.target.closest(".chart-point")));
+    changeChart.addEventListener("focusin",event=>showPoint(event.target.closest(".chart-point")));
+    changeChart.addEventListener("click",event=>showPoint(event.target.closest(".chart-point")));
+    changeChart.addEventListener("keydown",event=>{
+      const point=event.target.closest(".chart-point");
+      if(point&&(event.key==="Enter"||event.key===" ")){event.preventDefault();showPoint(point)}
+    });
   }
 })();
