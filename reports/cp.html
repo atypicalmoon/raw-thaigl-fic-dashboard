@@ -144,11 +144,15 @@
       aria-label="页面导航"
     >
       <a href="index.html">
-        全 CP 报告
+        全 CP
       </a>
 
-      <a href="../index.html#focus">
-        主看板
+      <a class="active" aria-current="page" href="cp.html">
+        单 CP
+      </a>
+
+      <a class="dashboard-link" href="../index.html#focus">
+        主看板 ↗
       </a>
     </nav>
 
@@ -612,11 +616,6 @@
     justify-content:flex-end;
   }
 
-  /* 小屏隐藏“全 CP 报告”，保留主看板 */
-  .report-nav a:first-child{
-    display:none;
-  }
-
   .cp-switcher-trigger{
     min-width:116px;
     max-width:138px;
@@ -626,6 +625,14 @@
     font-size:6px;
   }
 }
+  </style>
+  <style>
+    .report-nav{gap:4px;padding:3px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.74)}
+    .report-nav a{padding:6px 9px;border-radius:7px;color:var(--muted);font-size:9px;font-weight:700;white-space:nowrap}
+    .report-nav a:hover{color:var(--wine);text-decoration:none}
+    .report-nav a.active{background:var(--soft);color:var(--wine)}
+    .report-nav a.dashboard-link{margin-left:3px;border-left:1px solid var(--line);border-radius:0 7px 7px 0}
+    @media(max-width:430px){.report-nav{gap:2px;padding:2px}.report-nav a{display:inline-flex!important;padding:5px 6px;font-size:8px}}
   </style>
   <style>
     /* 作品标签独占一行，避免手机端长描述挤压标题。 */
@@ -639,6 +646,6 @@
   <a class="back-to-top" href="#" aria-label="返回顶部" title="返回顶部">↑</a>
   <style>.back-to-top{position:fixed;right:16px;bottom:16px;z-index:70;display:grid;width:36px;height:36px;place-items:center;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.93);box-shadow:0 8px 24px rgba(91,40,61,.1);color:var(--wine);font-size:17px;text-decoration:none}</style>
   <script src="cp-report-data.js"></script>
-  <script src="cp-report.js?v=bc303d36a307"></script>
+  <script src="cp-report.js?v=93955aa04e7e"></script>
 </body>
 </html>
