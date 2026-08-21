@@ -82,7 +82,7 @@ a{color:inherit}
 .chart-point.rise circle{fill:var(--rise);stroke:#8b2f4c}
 .chart-point.fall circle{fill:var(--fall);stroke:#4f6474}
 .chart-point.steady circle{fill:#fffaf8;stroke:var(--steady);stroke-width:2.4}
-.chart-point:hover circle{opacity:1;stroke:var(--ink);stroke-width:2.5}
+.chart-point:hover circle,.chart-point.selected circle{opacity:1;stroke:var(--ink);stroke-width:2.5}
 .chart-point{cursor:pointer;outline:none}
 .chart-point:focus circle{opacity:1;stroke:var(--ink);stroke-width:2.5}
 .chart-legend{display:flex;align-items:center;flex-wrap:wrap;gap:9px 16px;padding:10px 4px 0;border-top:1px solid var(--line);color:var(--muted);font-size:10px}

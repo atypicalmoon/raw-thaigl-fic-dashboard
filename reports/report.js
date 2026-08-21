@@ -32,7 +32,8 @@
   }
 
   function renderChangeChart(report){
-    const rows=report.cps.filter(row=>row.works>0||row.previous_works>0);
+    const rows=report.cps.filter(row=>row.works>0&&row.previous_works>0);
+    if(!rows.length)return '<p class="empty-note">本报告期没有可进行同期比较的 CP。</p>';
     const width=820,height=320,left=62,right=20,top=22,bottom=48;
     const plotWidth=width-left-right,plotHeight=height-top-bottom;
     const rawMax=Math.max(10,...rows.flatMap(row=>[row.works,row.previous_works]));
@@ -50,7 +51,7 @@
       const aria=`${row.cp}：同期 ${row.previous_works} 篇，本期 ${row.works} 篇，${row.authors} 位作者`;
       return `<g class="chart-point ${state}" role="button" tabindex="0" aria-label="${esc(aria)}" data-cp="${esc(row.cp)}" data-current="${row.works}" data-previous="${row.previous_works}" data-change="${row.work_delta}" data-authors="${row.authors}" data-state="${state}"><circle cx="${x(row.previous_works)}" cy="${y(row.works)}" r="${radius}"><title>${esc(aria)}</title></circle></g>`;
     }).join("");
-    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">横轴是去年同期作品数，纵轴是本期作品数。对角线上方表示增加，下方表示减少。圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-7}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="17" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 17 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div><p class="mobile-chart-hint">左右滑动并点击散点</p><div class="chart-selection" id="changeSelection" hidden></div>`;
+    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">只展示两个时期均有作品的 CP。横轴是去年同期作品数，纵轴是本期作品数；对角线上方表示增加，下方表示减少，圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-7}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="17" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 17 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div><p class="mobile-chart-hint">左右滑动并点击散点</p><div class="chart-selection" id="changeSelection" aria-live="polite" hidden></div>`;
   }
 
   function render(report){
@@ -67,6 +68,8 @@
     const comparable=report.cps.filter(row=>row.works>0&&row.previous_works>0);
     const rising=comparable.filter(row=>row.work_delta>0).length;
     const falling=comparable.filter(row=>row.work_delta<0).length;
+    const withoutBaseline=report.cps.filter(row=>row.works>0&&row.previous_works===0).length;
+    const withoutCurrent=report.cps.filter(row=>row.works===0&&row.previous_works>0).length;
     const topFiveWorks=[...report.cps].sort((a,b)=>b.works-a.works).slice(0,5).reduce((sum,row)=>sum+row.works,0);
     const topFiveShare=report.overview.period_works?topFiveWorks*100/report.overview.period_works:0;
     const newEntries=report.dimensions.new_entries||[];
@@ -103,7 +106,7 @@
 
       <section class="report-section month-section"><div class="section-heading"><div><p class="section-label">月度脉冲</p><h2>创作量如何流动</h2></div></div><div class="month-ribbon" style="--month-count:${report.months.length}">${report.months.map(month=>{const partial=!month.complete;const label=partial?`${month.label} · 至 ${cutoffDay} 日`:month.label;return `<article class="${month.works===peakMonth?'peak ':''}${partial?'partial':''}" title="${esc(label)}：${fmt(month.works)} 篇"><div class="month-bar-wrap"><i style="height:${Math.max(4,month.works/monthMax*100)}%"></i></div><b>${fmt(month.works)}</b><span>${esc(label)}</span></article>`}).join("")}</div></section>
 
-      <section class="report-section change-section"><div class="section-heading"><div><p class="section-label">同期变化</p><h2>CP 变化星图</h2></div><p>纵向看本期，横向看同期；圆点大小看作者数。</p></div><div class="change-layout"><div class="chart-card">${renderChangeChart(report)}<div class="chart-legend"><span class="rise">本期增加</span><span class="fall">本期减少</span><span class="steady">持平</span><i>对角线 = 同期相同 · 坐标经压缩</i></div></div><aside class="change-notes"><dl><div><dt>同期可比</dt><dd><b>${rising}</b> 上升 · <b>${falling}</b> 回落</dd></div><div><dt>前五 CP</dt><dd>占本期 <b>${fmt(topFiveShare)}%</b></dd></div><div><dt>本期新记录</dt><dd><b>${newEntries.length}</b> 个 CP · 均 ≥ 10 篇</dd></div></dl></aside></div></section>
+      <section class="report-section change-section"><div class="section-heading"><div><p class="section-label">同期变化</p><h2>CP 同期变化</h2></div><p>仅比较两个时期均有作品的 CP；圆点大小为作者数。</p></div><div class="change-layout"><div class="chart-card">${renderChangeChart(report)}<div class="chart-legend"><span class="rise">本期增加</span><span class="fall">本期减少</span><span class="steady">持平</span><i>对角线 = 同期相同 · 坐标经压缩</i></div></div><aside class="change-notes"><dl><div><dt>同期可比</dt><dd><b>${comparable.length}</b> 个 · ${rising} 上升 · ${falling} 回落</dd></div><div><dt>未进入坐标</dt><dd>${withoutBaseline} 无同期 · ${withoutCurrent} 无新作</dd></div><div><dt>前五 CP</dt><dd>占本期 <b>${fmt(topFiveShare)}%</b></dd></div></dl></aside></div></section>
 
       <section class="report-section observation-section"><div class="section-heading"><div><p class="section-label">活跃方式</p><h2>从三个角度观察 CP</h2></div><p>同一 CP 可能出现在多个维度。</p></div><div class="observation-grid">${observationCards}</div>${newEntries.length?`<div class="new-entry-strip"><span>本期新记录 · 至少 10 篇</span>${newEntries.map(cp=>`<a href="${cpLink(cp)}">${esc(cp)}</a>`).join("")}</div>`:""}</section>
 
@@ -146,17 +149,21 @@
     const changeSelection=document.getElementById("changeSelection");
     const showPoint=point=>{
       if(!point)return;
+      changeChart.querySelectorAll(".chart-point.selected").forEach(item=>item.classList.remove("selected"));
+      point.classList.add("selected");
       const change=Number(point.dataset.change);
       changeSelection.hidden=false;
       changeSelection.className=`chart-selection ${point.dataset.state}`;
       changeSelection.innerHTML=`<i></i><b>${esc(point.dataset.cp)}</b><span>本期 ${fmt(point.dataset.current)} 篇 · 同期 ${fmt(point.dataset.previous)} 篇 · ${signed(change)} · ${fmt(point.dataset.authors)} 位作者</span><a href="${cpLink(point.dataset.cp)}">查看单 CP →</a>`;
     };
-    changeChart.addEventListener("pointerover",event=>showPoint(event.target.closest(".chart-point")));
-    changeChart.addEventListener("focusin",event=>showPoint(event.target.closest(".chart-point")));
-    changeChart.addEventListener("click",event=>showPoint(event.target.closest(".chart-point")));
-    changeChart.addEventListener("keydown",event=>{
-      const point=event.target.closest(".chart-point");
-      if(point&&(event.key==="Enter"||event.key===" ")){event.preventDefault();showPoint(point)}
-    });
+    if(changeChart&&changeSelection){
+      changeChart.addEventListener("pointerover",event=>showPoint(event.target.closest(".chart-point")));
+      changeChart.addEventListener("focusin",event=>showPoint(event.target.closest(".chart-point")));
+      changeChart.addEventListener("click",event=>showPoint(event.target.closest(".chart-point")));
+      changeChart.addEventListener("keydown",event=>{
+        const point=event.target.closest(".chart-point");
+        if(point&&(event.key==="Enter"||event.key===" ")){event.preventDefault();showPoint(point)}
+      });
+    }
   }
 })();
