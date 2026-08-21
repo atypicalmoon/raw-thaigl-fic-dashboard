@@ -1,4 +1,10 @@
-# Cloudflare Pages: versioned data and static assets can be reused safely.
+# Cloudflare Pages: 数据版本与代码版本分开缓存。
+/cp_catalog.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/reports/cp-report-data.js
+  Cache-Control: public, max-age=0, must-revalidate
+
 /articles_summary.csv
   Cache-Control: public, max-age=31556952, immutable
 
@@ -8,11 +14,11 @@
 /script.js
   Cache-Control: public, max-age=31556952, immutable
 
-/cp_catalog.js
-  Cache-Control: public, max-age=31556952, immutable
-
 /style.css
   Cache-Control: public, max-age=31556952, immutable
 
-/reports/*.js
+/vendor/*
+  Cache-Control: public, max-age=31556952, immutable
+
+/reports/cp-report.js
   Cache-Control: public, max-age=31556952, immutable

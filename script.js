@@ -114,6 +114,7 @@ let tableVisibleCount = getTablePageSize();
 let currentFocusArticles = [];
 const focusStatsCache = new Map();
 let updateTimer = null;
+let deferredRenderGeneration = 0;
 const heatmapHiddenCps = new Set();
 let heatmapCpChoices = [];
 let heatmapVisibilityTimer = null;
@@ -121,7 +122,13 @@ let dedupInfo = { totalRows: 0, uniqueRows: 0 };
 let companyToCps = new Map();
 let cpToCompany = new Map();
 const cpCatalog = Array.isArray(window.CP_CATALOG) ? window.CP_CATALOG : [];
+const catalogCompanyByCp = new Map(cpCatalog.map(item => [item.cp, item.company]));
 const FILTER_STATE_STORAGE_KEY = "dashboard-filter-state-v1";
+const DAILY_DRAW_STORAGE_KEY = "dashboard-daily-draw-v1";
+const REVIEW_ACTIONS_STORAGE_KEY = "dashboard-review-actions-v1";
+const REVIEW_MODE = new URLSearchParams(window.location.search).get("review") === "1";
+let reviewQueue = [];
+let activeReviewArticle = null;
 
 function getAvailableYears() {
     return Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean);
@@ -143,7 +150,6 @@ function restoreFilterState() {
         setFromSavedValues(state.cps, saved.cps, cps, saved.allCps);
         setFromSavedValues(state.years, saved.years, years, saved.allYears);
         setFromSavedValues(state.tiers, saved.tiers, TIER_ORDER, saved.allTiers);
-        state.includeReview = Boolean(saved.includeReview);
         state.customLikeMin = Number.isFinite(saved.customLikeMin) ? saved.customLikeMin : null;
         state.customLikeMax = Number.isFinite(saved.customLikeMax) ? saved.customLikeMax : null;
         selectedFocusCp = cps.includes(saved.focusCp) ? saved.focusCp : "";
@@ -160,12 +166,169 @@ function persistFilterState() {
             cps: Array.from(state.cps), allCps: state.cps.size === cps.length,
             years: Array.from(state.years), allYears: state.years.size === years.length,
             tiers: Array.from(state.tiers), allTiers: state.tiers.size === TIER_ORDER.length,
-            includeReview: state.includeReview,
             customLikeMin: state.customLikeMin,
             customLikeMax: state.customLikeMax,
             focusCp: selectedFocusCp,
         }));
     } catch (_) {}
+}
+
+function normalizeReviewLink(value) {
+    return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function loadReviewQueue() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(REVIEW_ACTIONS_STORAGE_KEY));
+        reviewQueue = Array.isArray(saved) ? saved.filter(item => item && item.link && item.action) : [];
+    } catch (_) {
+        reviewQueue = [];
+    }
+}
+
+function persistReviewQueue() {
+    try {
+        localStorage.setItem(REVIEW_ACTIONS_STORAGE_KEY, JSON.stringify(reviewQueue));
+    } catch (_) {}
+}
+
+function queuedReviewFor(article) {
+    const link = normalizeReviewLink(article?.url);
+    return reviewQueue.find(item => normalizeReviewLink(item.link) === link) || null;
+}
+
+function setReviewPanel(open) {
+    const panel = document.getElementById("reviewQueuePanel");
+    const trigger = document.getElementById("reviewQueueButton");
+    if (!panel || !trigger) return;
+    panel.hidden = !open;
+    trigger.setAttribute("aria-expanded", String(open));
+}
+
+function renderReviewQueue() {
+    const count = document.getElementById("reviewQueueCount");
+    const list = document.getElementById("reviewQueueList");
+    const download = document.getElementById("reviewQueueDownload");
+    const clear = document.getElementById("reviewQueueClear");
+    if (!count || !list) return;
+    count.textContent = reviewQueue.length.toLocaleString();
+    download.disabled = !reviewQueue.length;
+    clear.disabled = !reviewQueue.length;
+    list.replaceChildren();
+    if (!reviewQueue.length) {
+        const empty = document.createElement("p");
+        empty.className = "review-queue-empty";
+        empty.textContent = "还没有校对记录。请先选择一个 CP，再在作品标题下点击“校对”。";
+        list.appendChild(empty);
+        return;
+    }
+    reviewQueue.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "review-queue-item";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item.title || item.link;
+        const meta = document.createElement("small");
+        meta.textContent = item.action === "修改CP" ? `${item.current_cp || "未识别"} → ${item.new_cp}` : `${item.current_cp || "未识别"} · 手动排除`;
+        copy.append(title, meta);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `移除 ${item.title || "此记录"}`);
+        remove.textContent = "移除";
+        remove.addEventListener("click", () => {
+            reviewQueue = reviewQueue.filter(entry => normalizeReviewLink(entry.link) !== normalizeReviewLink(item.link));
+            persistReviewQueue();
+            renderReviewQueue();
+            if (selectedFocusCp) renderFocusTable(currentFocusArticles);
+        });
+        row.append(copy, remove);
+        list.appendChild(row);
+    });
+}
+
+function openReviewDialog(article) {
+    const dialog = document.getElementById("reviewDialog");
+    if (!dialog || !article?.url || article.url === "#") return;
+    activeReviewArticle = article;
+    const queued = queuedReviewFor(article);
+    document.getElementById("reviewDialogTitle").textContent = article.title || "无标题";
+    document.getElementById("reviewDialogCurrentCp").textContent = article.cp || selectedFocusCp || "未识别";
+    const cpSelect = document.getElementById("reviewNewCp");
+    cpSelect.value = queued?.new_cp || article.cp || selectedFocusCp || cpSelect.options[0]?.value || "";
+    document.getElementById("reviewNote").value = queued?.note || "";
+    dialog.showModal();
+}
+
+function saveReviewAction(action) {
+    if (!activeReviewArticle) return;
+    const currentCp = activeReviewArticle.cp || selectedFocusCp || "";
+    const newCp = action === "修改CP" ? document.getElementById("reviewNewCp").value : "";
+    if (action === "修改CP" && (!newCp || newCp === currentCp)) {
+        document.getElementById("reviewNewCp").focus();
+        return;
+    }
+    const item = {
+        action,
+        link: normalizeReviewLink(activeReviewArticle.url),
+        title: activeReviewArticle.title || "",
+        current_cp: currentCp,
+        new_cp: newCp,
+        note: document.getElementById("reviewNote").value.trim(),
+    };
+    reviewQueue = reviewQueue.filter(entry => normalizeReviewLink(entry.link) !== item.link);
+    reviewQueue.push(item);
+    persistReviewQueue();
+    renderReviewQueue();
+    renderFocusTable(currentFocusArticles);
+    document.getElementById("reviewDialog").close();
+}
+
+function csvCell(value) {
+    const text = String(value ?? "");
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadReviewQueue() {
+    if (!reviewQueue.length) return;
+    const fields = ["action", "link", "title", "current_cp", "new_cp", "note"];
+    const csv = [fields.join(","), ...reviewQueue.map(item => fields.map(field => csvCell(item[field])).join(","))].join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `manual_actions_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function initReviewMode() {
+    if (!REVIEW_MODE) return;
+    document.body.classList.add("review-mode");
+    const trigger = document.getElementById("reviewQueueButton");
+    trigger.hidden = false;
+    loadReviewQueue();
+    const select = document.getElementById("reviewNewCp");
+    Array.from(new Set(cpCatalog.map(item => item.cp))).sort((a, b) => a.localeCompare(b)).forEach(cp => {
+        const option = document.createElement("option");
+        option.value = cp;
+        option.textContent = cp;
+        select.appendChild(option);
+    });
+    trigger.addEventListener("click", () => setReviewPanel(document.getElementById("reviewQueuePanel").hidden));
+    document.getElementById("reviewQueueClose").addEventListener("click", () => setReviewPanel(false));
+    document.getElementById("reviewSaveCpButton").addEventListener("click", () => saveReviewAction("修改CP"));
+    document.getElementById("reviewExcludeButton").addEventListener("click", () => saveReviewAction("排除"));
+    document.getElementById("reviewQueueDownload").addEventListener("click", downloadReviewQueue);
+    document.getElementById("reviewQueueClear").addEventListener("click", () => {
+        if (!reviewQueue.length || !window.confirm("清空尚未导出的全部校对记录？")) return;
+        reviewQueue = [];
+        persistReviewQueue();
+        renderReviewQueue();
+        if (selectedFocusCp) renderFocusTable(currentFocusArticles);
+    });
+    renderReviewQueue();
 }
 
 // 🚀 性能优化 2：缓存各图表的持久化 <g> 容器引用，避免每次 update() 都 selectAll("*").remove() 整个 SVG 再重建。
@@ -180,7 +343,6 @@ let state = {
     companies: new Set(),
     years: new Set(),
     tiers: new Set(TIER_ORDER),
-    includeReview: false,
     customLikeMin: null,
     customLikeMax: null,
 };
@@ -299,40 +461,19 @@ function hydrateCpArticles(cp, articles) {
     return details ? articles.map(article => ({ ...article, ...(details.get(article.detail_key) || {}) })) : null;
 }
 
-// 每行需要 HTML 解码的字段，统一在这里声明，方便以后增减
-const DECODE_FIELDS = ["title", "author", "cp", "company", "keyword", "duplicate_cps"];
-
 function parseCSVText(text) {
     const firstLine = text.split('\n')[0] || '';
     const delimiter = firstLine.includes('\t') ? '\t' : ',';
     const rawRows = d3.dsvFormat(delimiter).parse(text);
+    return rawRows.map(d => {
+        const decTitle = d.title ? decodeHtmlSingle(d.title.trim()) : "";
+        const decAuthor = d.author ? decodeHtmlSingle(d.author.trim()) : "";
+        const decCp = (d.cp || "").trim();
+        const decCompany = (d.company || "").trim();
+        const decKeyword = (d.keyword || "").trim();
+        const decDupCpsRaw = (d.duplicate_cps || "").trim();
 
-    // 第一步：把每行需要解码的原始字符串都取出来，攒成一个大数组
-    const rawStrings = [];
-    rawRows.forEach(d => {
-        rawStrings.push(d.title ? d.title.trim() : (d.name ? String(d.name).trim() : ""));
-        rawStrings.push((d.author || d.writer || d.user || d.username || "").trim());
-        rawStrings.push(d.cp ? d.cp.trim() : "");
-        rawStrings.push(d.company ? d.company.trim() : "");
-        rawStrings.push(d.keyword ? String(d.keyword).trim() : "");
-        rawStrings.push(d.duplicate_cps ? String(d.duplicate_cps).trim() : "");
-    });
-
-    // 第二步：一次性批量解码（内部只做 1~3 次 DOM 操作，而不是 行数×6 次）
-    const decoded = batchDecodeHtml(rawStrings);
-    const FIELD_COUNT = DECODE_FIELDS.length;
-
-    // 第三步：组装成最终行对象
-    return rawRows.map((d, i) => {
-        const base = i * FIELD_COUNT;
-        const decTitle = decoded[base];
-        const decAuthor = decoded[base + 1];
-        const decCp = decoded[base + 2];
-        const decCompany = decoded[base + 3];
-        const decKeyword = decoded[base + 4];
-        const decDupCpsRaw = decoded[base + 5];
-
-        const rawStatus = (d.Status || d.status || "").trim();
+        const rawStatus = (d.Status || d.status || "OK").trim();
         const pDate = new Date(d.publish_date);
         const validDate = !isNaN(pDate.getTime());
         const likes = +String(d.likes || "0").replace(/,/g, "") || 0;
@@ -353,7 +494,7 @@ function parseCSVText(text) {
             title: decTitle || "无标题",
             author: decAuthor || "匿名",
             cp: cp,
-            company: decCompany || "未知",
+            company: decCompany || catalogCompanyByCp.get(cp) || "未知",
             keyword: decKeyword,
             duplicate_cps: finalDup,
             status: rawStatus,
@@ -385,12 +526,7 @@ function dedupeByLink(rows) {
 
 function applyStatusFilter() {
     baseOkArticleCount = dedupeByLink(allParsedRows.filter(d => (d.status ? d.status.toLowerCase() : "") === "ok")).length;
-    const statusFiltered = allParsedRows.filter(d => {
-        const currentStatus = d.status ? d.status.toLowerCase() : "";
-        if (currentStatus === "ok") return true;
-        if (d.status === "需要review") return state.includeReview;
-        return false;
-    });
+    const statusFiltered = allParsedRows.filter(d => (d.status ? d.status.toLowerCase() : "") === "ok");
     dataAfterStatus = dedupeByLink(statusFiltered);
     dedupInfo = { totalRows: statusFiltered.length, uniqueRows: dataAfterStatus.length };
 }
@@ -444,7 +580,6 @@ function initDashboard() {
     renderCpCheckboxes();
     renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
-    document.getElementById("includeReviewToggle").checked = state.includeReview;
     document.getElementById("customLikeMin").value = state.customLikeMin ?? "";
     document.getElementById("customLikeMax").value = state.customLikeMax ?? "";
 
@@ -452,6 +587,7 @@ function initDashboard() {
     document.getElementById("dashboardGrid").style.display = "block";
 
     bindEvents();
+    initReviewMode();
     update();
 }
 
@@ -965,21 +1101,15 @@ function bindEvents() {
     document.getElementById("growthTopNSelect").onchange = () => drawGrowthChart(getFilteredRows());
     document.getElementById("cpBarTopNSelect").onchange = () => drawCpBar(getFilteredRows());
     document.getElementById("likesTopNSelect").onchange = () => drawLikesChart(getFilteredRows());
-    document.getElementById("includeReviewToggle").onchange = function() {
-        state.includeReview = this.checked;
-        applyStatusFilter(); update();
-    };
     document.getElementById("resetBtn").onclick = () => {
         replaceSetContents(state.companies, companyToCps.keys());
         replaceSetContents(state.cps, cpColor.domain());
         replaceSetContents(state.years, Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean));
         replaceSetContents(state.tiers, TIER_ORDER);
-        state.includeReview = false;
         state.customLikeMin = null; state.customLikeMax = null;
         tableSearchQuery = "";
         tableSortMode = "likes_desc";
         tableStatusMode = "all";
-        document.getElementById("includeReviewToggle").checked = false;
         document.getElementById("cpSearchInput").value = "";
         document.getElementById("tableFilterInput").value = "";
         document.getElementById("tableSortSelect").value = tableSortMode;
@@ -1022,28 +1152,29 @@ function updateKPIs(rows) {
     const allYearCount = new Set(allParsedRows.map(d => d.year).filter(Boolean)).size;
     const hasActiveFilter = state.companies.size !== companyToCps.size ||
         state.cps.size !== dictionaryTotal || state.years.size !== allYearCount ||
-        state.tiers.size !== TIER_ORDER.length || state.includeReview ||
+        state.tiers.size !== TIER_ORDER.length ||
         state.customLikeMin !== null || state.customLikeMax !== null;
     document.getElementById("kpiTotalArticles").innerText = totalArticles.toLocaleString();
-    const dupRemoved = dedupInfo.totalRows - dedupInfo.uniqueRows;
+    const sourceTotal = Number(window.DASHBOARD_META?.all_articles) || dataAfterStatus.length;
+    const excludedTotal = Number(window.DASHBOARD_META?.excluded_articles) || Math.max(0, sourceTotal - dataAfterStatus.length);
     document.getElementById("kpiArticleLabel").innerText = hasActiveFilter ? "筛选结果" : "有效作品";
     document.getElementById("kpiQualityNote").innerText = hasActiveFilter ?
         `全站有效作品 ${baseOkArticleCount.toLocaleString()} 篇` :
-        (dupRemoved > 0 ? `通过内容筛选 ${dataAfterStatus.length.toLocaleString()} 篇 · 合并 ${dupRemoved.toLocaleString()} 项重复` : `通过内容筛选 ${dataAfterStatus.length.toLocaleString()} 篇`);
+        `全量清洗 ${sourceTotal.toLocaleString()} 篇 · 排除 ${excludedTotal.toLocaleString()} 篇`;
     document.getElementById("kpiTotalLikes").innerText = formatNumber(totalLikes);
     document.getElementById("kpiLikesNote").innerText = hasActiveFilter ? "当前结果合计" : "全部有效作品合计";
     document.getElementById("kpiTotalCPs").innerText = distinctCPs;
-    document.getElementById("kpiCpLabel").innerText = hasActiveFilter ? "覆盖 CP" : "当前覆盖 CP";
-    document.getElementById("kpiTopCP").innerText = hasActiveFilter ? `全站收录范围 ${dictionaryTotal} 对 CP` : `预设收录 ${dictionaryTotal} 个 · ${uncollectedTotal} 个暂无主归属作品`;
+    document.getElementById("kpiCpLabel").innerText = hasActiveFilter ? "覆盖 CP" : "有作品 CP";
+    document.getElementById("kpiTopCP").innerText = hasActiveFilter ? `全站预设收录 ${dictionaryTotal} 个 CP` : `预设收录 ${dictionaryTotal} 个 · ${uncollectedTotal} 个暂无作品`;
     document.getElementById("kpiTimeSpan").innerText = timeSpan;
-    document.getElementById("kpiEndRate").innerText = hasActiveFilter ? `完结率 ${endRate}` : `完结作品：${endRate}`;
+    document.getElementById("kpiEndRate").innerText = `完结率 ${endRate}`;
     const companyText = state.companies.size === companyToCps.size ? "全部公司" : `${state.companies.size}家公司`;
-    const cpText = `${state.cps.size}个CP`;
+    const cpText = `${state.cps.size} 个 CP`;
     const years = Array.from(state.years).sort();
     const yearText = years.length ? (years.length <= 3 ? years.join("、") : `${years[0]}-${years[years.length - 1]}`) : "未选年份";
     const likeText = state.customLikeMin !== null || state.customLikeMax !== null ?
-        `点赞 ${state.customLikeMin ?? 0}-${state.customLikeMax ?? "∞"}` : `${state.tiers.size}个点赞档`;
-    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText} · ${likeText} · 命中 ${totalArticles} 条）`;
+        `点赞 ${state.customLikeMin ?? 0}-${state.customLikeMax ?? "∞"}` : `${state.tiers.size} 个点赞档`;
+    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText} · ${likeText} · 命中 ${totalArticles.toLocaleString()} 条）`;
     document.getElementById("mobileCompanyCount").innerText = `${state.companies.size} 个已选`;
     document.getElementById("mobileCpCount").innerText = `${state.cps.size} 个已选`;
     document.getElementById("mobileYearCount").innerText = `${state.years.size} 个已选`;
@@ -1058,13 +1189,19 @@ function update() {
 
 function updateNow() {
     const rows = getFilteredRows();
+    const generation = ++deferredRenderGeneration;
     persistFilterState();
     updateKPIs(rows);
     drawCpBar(rows);
     drawLikesChart(rows);
-    drawGrowthChart(rows);
-    drawHeatmap(rows);
-    syncFocusSelectAndDraw(rows);
+    const drawBelowFold = () => {
+        if (generation !== deferredRenderGeneration) return;
+        drawGrowthChart(rows);
+        drawHeatmap(rows);
+        syncFocusSelectAndDraw(rows);
+    };
+    if ("requestIdleCallback" in window) window.requestIdleCallback(drawBelowFold, { timeout: 650 });
+    else setTimeout(drawBelowFold, 40);
 }
 
 function syncFocusSelectAndDraw(rows) {
@@ -1573,7 +1710,7 @@ function drawHeatmap(rows) {
 
     const wrapper = container.append("div").attr("class", "heatmap-wrapper");
     const fixedBox = wrapper.append("div").attr("class", "heatmap-fixed-labels");
-    const leftSvg = fixedBox.append("svg").attr("width", 150).attr("height", gridH + headerH + footerH);
+    const leftSvg = fixedBox.append("svg").attr("width", 118).attr("height", gridH + headerH + footerH);
     const leftG = leftSvg.append("g").attr("transform", `translate(0, ${headerH})`);
 
     sortedCps.forEach((cp, i) => {
@@ -1582,8 +1719,8 @@ function drawHeatmap(rows) {
         const rowBtn = leftG.append("g").style("cursor", "pointer").attr("tabindex", 0).attr("role", "button")
             .on("click", event => activateChartCp(event, cp, null, `<b>${cp}</b><br>当前时间范围发文：<b>${cpTotal.toLocaleString()}</b> 篇`))
             .on("keydown", e => { if (e.key === "Enter" || e.key === " ") setFocusCP(cp); });
-        rowBtn.append("circle").attr("cx", 12).attr("cy", yPos + cellH / 2).attr("r", 4).attr("fill", cpColor(cp));
-        rowBtn.append("text").attr("x", 22).attr("y", yPos + cellH / 2 + 4).attr("fill", "var(--text-main)").attr("font-size", cp.length > 13 ? "10px" : "12px")
+        rowBtn.append("circle").attr("cx", 9).attr("cy", yPos + cellH / 2).attr("r", 3).attr("fill", cpColor(cp));
+        rowBtn.append("text").attr("x", 17).attr("y", yPos + cellH / 2 + 3).attr("fill", "var(--text-main)").attr("font-size", cp.length > 12 ? "8.5px" : "10px")
             .text(cp).append("title").text(cp);
     });
 
@@ -1639,7 +1776,7 @@ function drawFocusArea(rows) {
         document.getElementById("articleCountBadge").innerText = "共 0 篇";
         document.getElementById("focusArticleTotal").innerText = "—";
         document.getElementById("focusCompletionRate").innerText = "—";
-        document.getElementById("focusHighLikeRate").innerText = "—";
+        document.getElementById("focusLikeP90").innerText = "—";
         document.getElementById("focusPeakMonth").innerText = "—";
         renderFocusTable([]); return;
     }
@@ -1656,21 +1793,21 @@ function drawFocusArea(rows) {
     }
 
     document.getElementById("currentFocusCpLabel").innerText = selectedFocusCp;
-    const cacheKey = `${selectedFocusCp}|${Array.from(state.companies).sort().join(",")}|${Array.from(state.cps).sort().join(",")}|${Array.from(state.years).sort().join(",")}|${Array.from(state.tiers).sort().join(",")}|${state.customLikeMin ?? ""}|${state.customLikeMax ?? ""}|${state.includeReview}`;
+    const cacheKey = `${selectedFocusCp}|${Array.from(state.companies).sort().join(",")}|${Array.from(state.cps).sort().join(",")}|${Array.from(state.years).sort().join(",")}|${Array.from(state.tiers).sort().join(",")}|${state.customLikeMin ?? ""}|${state.customLikeMax ?? ""}`;
     let stats = focusStatsCache.get(cacheKey);
     if (!stats) {
         const completionRate = cpArticles.length ? cpArticles.filter(d => d.is_end).length / cpArticles.length * 100 : 0;
-        const highCount = cpArticles.filter(d => d.likes >= 1000).length;
-        const highRate = cpArticles.length ? (highCount / cpArticles.length * 100).toFixed(1) : "0.0";
+        const likes = cpArticles.map(d => d.likes).sort((a, b) => a - b);
+        const likeP90 = likes.length ? likes[Math.min(likes.length - 1, Math.ceil(likes.length * .9) - 1)] : 0;
         const monthCounts = d3.rollup(cpArticles.filter(d => d.month_year), v => v.length, d => d.month_year);
         const peakMonth = Array.from(monthCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
-        stats = { completionRate, highRate, peakMonth: peakMonth ? peakMonth[0] : "无有效日期" };
+        stats = { completionRate, likeP90, peakMonth: peakMonth ? peakMonth[0] : "无有效日期" };
         if (focusStatsCache.size >= 200) focusStatsCache.clear();
         focusStatsCache.set(cacheKey, stats);
     }
     document.getElementById("focusArticleTotal").innerText = cpArticles.length.toLocaleString();
     document.getElementById("focusCompletionRate").innerText = `${stats.completionRate.toFixed(1)}%`;
-    document.getElementById("focusHighLikeRate").innerText = `${stats.highRate}%`;
+    document.getElementById("focusLikeP90").innerText = stats.likeP90.toLocaleString();
     document.getElementById("focusPeakMonth").innerText = stats.peakMonth;
 }
 
@@ -1716,6 +1853,14 @@ function renderFocusTable(cpArticles) {
         const linkTd = tr.append("td").attr("class", "title-cell");
         if (d.url && d.url !== "#") linkTd.append("a").attr("href", d.url).attr("target", "_blank").attr("rel", "noopener noreferrer").attr("title", d.title).text(d.title);
         else linkTd.append("span").attr("class", "plain-title").attr("title", d.title).text(d.title);
+        if (REVIEW_MODE && d.url && d.url !== "#") {
+            const queued = queuedReviewFor(d);
+            linkTd.append("button")
+                .attr("type", "button")
+                .attr("class", `review-row-button${queued ? " queued" : ""}`)
+                .text(queued ? (queued.action === "修改CP" ? `待改为 ${queued.new_cp}` : "待排除") : "校对")
+                .on("click", event => { event.preventDefault(); event.stopPropagation(); openReviewDialog(d); });
+        }
         tr.append("td").append("span").attr("class", "author-text").text(d.author);
         tr.append("td").style("color", "var(--text-muted)").text(d.publish_date_str);
         tr.append("td").attr("class", "number").style("font-weight", "700").text(d.likes.toLocaleString());
@@ -1730,17 +1875,53 @@ let dailyRevealTimer = null;
 let dailyCloseTimer = null;
 let dailySelection = null;
 
+function bangkokDateKey() {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(new Date());
+}
+
+function restoreDailySelection(eligible) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(DAILY_DRAW_STORAGE_KEY));
+        if (!saved || saved.date !== bangkokDateKey()) return null;
+        const work = eligible.find(item =>
+            (saved.detailKey && item.detail_key === saved.detailKey) ||
+            (saved.link && item.url === saved.link)
+        );
+        return work ? { cp: work.cp, work } : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function persistDailySelection(selection) {
+    try {
+        localStorage.setItem(DAILY_DRAW_STORAGE_KEY, JSON.stringify({
+            date: bangkokDateKey(),
+            cp: selection.cp,
+            detailKey: selection.work.detail_key || "",
+            link: selection.work.url || "",
+        }));
+    } catch (_) {}
+}
+
 function drawDailyCp() {
     const eligible = dedupeByLink(allParsedRows.filter(d =>
         (d.status || "").toLowerCase() === "ok" && d.publish_date_obj && d.url && d.url !== "#"
     ));
     if (!eligible.length) return;
+    if (!dailySelection) dailySelection = restoreDailySelection(eligible);
     if (!dailySelection) {
         const grouped = d3.group(eligible, d => d.cp);
         const cps = Array.from(grouped.keys());
         const cp = cps[Math.floor(Math.random() * cps.length)];
         const works = grouped.get(cp);
         dailySelection = { cp, work: works[Math.floor(Math.random() * works.length)] };
+        persistDailySelection(dailySelection);
     }
     const { cp, work } = dailySelection;
     const detail = focusDetailsCache.get(cp)?.get(work.detail_key);

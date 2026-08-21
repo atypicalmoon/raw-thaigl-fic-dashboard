@@ -1,14 +1,6 @@
-# 本机维护笔记与临时预览，不参与发布
+# 网站仓库只保存可公开部署的文件。
 LOCAL_NOTES.md
 reports/*-preview.html
 reports/*-compare.html
-scripts/__pycache__/
-
-# 仅本机维护：报告生成源、核对清单与快捷脚本
-data/report_events.csv
-data/cp_event_research.csv
-scripts/build_cp_report_data.py
-更新全部报告.bat
-reports/README.md
-
 reports/.vscode/
+/articles_cleaned.csv

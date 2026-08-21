@@ -17,8 +17,8 @@
     </script>
     <meta name="description" content="ReadAWrite 泰百 CP 同人作品数据看板。" />
     <title>泰百同人数据看板</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=20260818001353" />
+    <script defer src="vendor/d3.v7.min.js?v=f2094bbf6141"></script>
+    <link rel="stylesheet" href="style.css?v=76a5c2b7dbc4" />
 </head>
 <body>
     <header class="site-header">
@@ -27,6 +27,7 @@
             <span><strong>ReadAWrite 泰百同人数据看板</strong><small>THAI GL FANFICTION DASHBOARD</small></span>
         </a>
         <div class="site-header-actions">
+            <button class="header-icon-button review-queue-trigger" id="reviewQueueButton" type="button" aria-expanded="false" aria-controls="reviewQueuePanel" title="打开校对篮" hidden><span class="header-icon" aria-hidden="true">✓</span><span class="header-action-label">校对</span><span class="review-count-badge" id="reviewQueueCount">0</span></button>
             <a class="header-icon-button report-link" href="reports/index.html" aria-label="查看 2026 年 1-7 月报告" title="分析报告"><span class="header-icon" aria-hidden="true">▤</span><span class="header-action-label">报告</span></a>
             <div class="data-info header-data-info" id="dataInfo"><button class="data-info-trigger header-icon-button" id="dataInfoTrigger" type="button" aria-expanded="false" aria-controls="dataInfoPopover" aria-label="数据说明" title="数据说明"><span class="header-icon" aria-hidden="true">ⓘ</span><span class="header-action-label">说明</span></button><div class="data-info-popover" id="dataInfoPopover" role="dialog" aria-label="数据说明" hidden><div class="data-info-header"><strong>数据说明</strong><button id="dataInfoClose" type="button" aria-label="关闭数据说明">×</button></div><dl><div><dt>收录范围：</dt><dd>收录至少有 1 章且发布日期有效的作品。剔除 BL 关键词、非目标 CP、失效页面及人工排除项。</dd></div><div><dt>CP 识别：</dt><dd>按双方姓名的正序、逆序及部分泰文写法识别。</dd></div><div><dt>归属与去重：</dt><dd>同一链接仅保留一条；多 CP 命中时依次参考标题、Tag 与人工复核。</dd></div><div><dt>时间口径：</dt><dd>按作品首次发布时间统计；后续标题、Tag 或 CP 修改可能影响时间线识别。</dd></div><div><dt>免责声明：</dt><dd>非官方数据项目。配色不代表应援色、排名或立场；数据可能存在遗漏或误差，仅供参考与交流。</dd></div></dl></div></div>
             <button class="theme-toggle header-icon-button" id="themeToggle" type="button" aria-label="简洁模式" aria-pressed="false" title="简洁模式"><span class="header-icon" aria-hidden="true">◐</span><span class="header-action-label">主题</span></button>
@@ -37,8 +38,8 @@
         <section class="kpi-grid" id="kpiStrip" aria-label="当前筛选概览">
             <article class="kpi-card featured"><div class="kpi-label" id="kpiArticleLabel">有效作品</div><div class="kpi-value" id="kpiTotalArticles">—</div><div class="kpi-sub" id="kpiQualityNote">数据加载中…</div></article>
             <article class="kpi-card"><div class="kpi-label">累计点赞</div><div class="kpi-value" id="kpiTotalLikes">—</div><div class="kpi-sub" id="kpiLikesNote">全部有效作品合计</div></article>
-            <article class="kpi-card"><div class="kpi-label" id="kpiCpLabel">当前覆盖 CP</div><div class="kpi-value" id="kpiTotalCPs">—</div><div class="kpi-sub" id="kpiTopCP">预设收录 — 个 · — 个暂无主归属作品</div></article>
-            <article class="kpi-card"><div class="kpi-label">发布日期范围</div><div class="kpi-value" id="kpiTimeSpan">—</div><div class="kpi-sub" id="kpiEndRate">完结作品：—</div></article>
+            <article class="kpi-card"><div class="kpi-label" id="kpiCpLabel">有作品 CP</div><div class="kpi-value" id="kpiTotalCPs">—</div><div class="kpi-sub" id="kpiTopCP">预设收录 — 个 · — 个暂无作品</div></article>
+            <article class="kpi-card"><div class="kpi-label">发布日期范围</div><div class="kpi-value" id="kpiTimeSpan">—</div><div class="kpi-sub" id="kpiEndRate">完结率 —</div></article>
         </section>
 
         <section class="panel" id="filterPanel" style="display:none;">
@@ -50,7 +51,7 @@
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>CP 选择</span><small id="mobileCpCount">—</small></button><span class="control-label">CP 选择</span><div class="control-body"><div class="btn-group"><input type="text" id="cpSearchInput" class="search-input" placeholder="搜索 CP…" /><button class="btn-action" id="selectAllCPBtn">选中可见</button><button class="btn-action mobile-secondary-action" id="invertCPBtn">反选可见</button><button class="btn-action" id="clearCPBtn">清空</button></div><div class="multiselect-box compact-group" id="cpCheckboxList"></div></div></div>
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>发文年份</span><small id="mobileYearCount">—</small></button><span class="control-label">发文年份</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllYearBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertYearBtn">反选</button><button class="btn-action" id="clearYearBtn">清空</button></div><div class="multiselect-box" id="yearCheckboxList"></div></div></div>
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>点赞分档</span><small id="mobileTierCount">—</small></button><span class="control-label">点赞分档</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllTierBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertTierBtn">反选</button><button class="btn-action" id="clearTierBtn">清空</button><span class="mobile-line-break"></span><span class="helper">精确区间</span><input type="number" id="customLikeMin" class="search-input small" placeholder="最小" /><span>-</span><input type="number" id="customLikeMax" class="search-input small" placeholder="最大" /></div><div class="btn-group" id="tierChips"></div></div></div>
-                <div class="filter-footer"><label class="checkbox-item"><input type="checkbox" id="includeReviewToggle" /> 包含需要复核的条目</label><button class="btn-action" id="resetBtn">重置全部筛选</button></div>
+                <div class="filter-footer"><span class="helper">所有页面仅展示状态为 OK 的作品</span><button class="btn-action" id="resetBtn">重置全部筛选</button></div>
                 <div class="mobile-filter-actions"><button class="btn-action" id="mobileResetBtn" type="button">重置筛选</button><button class="primary-button" id="mobileCollapseFilterBtn" type="button">收起筛选（<span id="mobileFilterResultCount">—</span> 篇）</button></div>
             </div>
         </section>
@@ -72,7 +73,7 @@
                 <div class="section-heading"><div><span class="section-kicker">CP DETAIL</span><h2>单 CP 数据</h2></div></div>
                 <article class="focus-card" id="focusCard">
                     <div class="focus-header" id="focusHeader"><div class="lenamiu-easter-egg" id="lenamiuEasterEgg" aria-hidden="true"></div><div class="focus-identity"><span class="focus-overline">SELECTED CP</span><div class="focus-title-line"><h3 id="currentFocusCpLabel">选择一对 CP</h3><a class="single-cp-report-link" id="singleCpReportLink" href="reports/cp.html" aria-label="查看单 CP 创作趋势分析" title="查看趋势报告" hidden>报告 <span>↗</span></a></div></div><div class="focus-picker"><span>搜索并切换 CP</span><div class="focus-picker-row"><div class="focus-combobox"><input id="focusCpSearch" class="search-input" placeholder="输入 CP 名称…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="focusCpOptions" /><button id="focusCpArrow" type="button" aria-label="展开 CP 列表">⌄</button><div id="focusCpOptions" class="focus-cp-options" role="listbox" hidden></div></div><button class="focus-tool-button" id="clearFocusCpBtn" type="button">清空</button><button class="focus-tool-button random" id="randomCpBtn" type="button">随机 CP</button></div></div></div>
-                    <div class="focus-stats" id="focusStats"><div><span>收录作品</span><strong id="focusArticleTotal">—</strong></div><div><span>完结率</span><strong id="focusCompletionRate">—</strong></div><div><span>1000+ 作品</span><strong id="focusHighLikeRate">—</strong></div><div><span>最活跃月份</span><strong id="focusPeakMonth">—</strong></div></div>
+                    <div class="focus-stats" id="focusStats"><div><span>收录作品</span><strong id="focusArticleTotal">—</strong></div><div><span>完结率</span><strong id="focusCompletionRate">—</strong></div><div><span>点赞前 10% 门槛</span><strong id="focusLikeP90">—</strong></div><div><span>最活跃月份</span><strong id="focusPeakMonth">—</strong></div></div>
                     <div class="table-toolbar"><div class="table-title"><strong>作品清单</strong><span id="articleCountBadge">共 0 篇</span><select id="tableStatusSelect" aria-label="作品完结状态"><option value="all">全部状态</option><option value="ended">已完结</option><option value="ongoing">连载中</option></select><select id="tableSortSelect" aria-label="作品排序方式"><option value="likes_desc">点赞从高到低</option><option value="date_desc">发布日期从新到旧</option><option value="views_desc">阅读量从高到低</option><option value="title_asc">标题名称排序</option></select></div><div class="table-search-wrap"><input type="text" id="tableFilterInput" class="table-search-input" placeholder="搜索标题 / 作者…" /><button id="clearTableSearchBtn" type="button">清空</button></div></div>
                     <div class="article-table-wrap"><table class="article-table"><thead><tr><th>文章标题</th><th>作者</th><th>发布日期</th><th class="number">点赞</th><th class="number">阅读</th><th class="center">状态</th></tr></thead><tbody id="articleTableBody"></tbody></table></div><button id="loadMoreArticlesBtn" class="load-more-articles" type="button" hidden>加载更多</button>
                 </article>
@@ -97,8 +98,23 @@
         </div>
         <span class="daily-gacha-hint" id="dailyDrawHint">点击卡牌翻开</span>
     </div>
+    <a class="back-to-top" href="#top" aria-label="返回顶部" title="返回顶部">↑</a>
+    <aside class="review-queue-panel" id="reviewQueuePanel" aria-label="人工校对篮" hidden>
+        <div class="review-queue-head"><div><strong>人工校对篮</strong><small>只记录改 CP 与手动排除</small></div><button id="reviewQueueClose" type="button" aria-label="关闭校对篮">×</button></div>
+        <div class="review-queue-list" id="reviewQueueList"></div>
+        <div class="review-queue-actions"><button class="btn-action" id="reviewQueueClear" type="button">清空</button><button class="primary-button" id="reviewQueueDownload" type="button">导出 CSV</button></div>
+    </aside>
+    <dialog class="review-dialog" id="reviewDialog">
+        <form method="dialog" id="reviewForm">
+            <div class="review-dialog-head"><div><span>人工校对</span><strong id="reviewDialogTitle">—</strong></div><button value="cancel" aria-label="关闭校对">×</button></div>
+            <p class="review-dialog-current">当前 CP：<b id="reviewDialogCurrentCp">—</b></p>
+            <label for="reviewNewCp">改为</label><select id="reviewNewCp"></select>
+            <label for="reviewNote">备注（可选）</label><textarea id="reviewNote" rows="2" placeholder="例如：标题实际属于另一组 CP"></textarea>
+            <div class="review-dialog-actions"><button class="btn-action" value="cancel">取消</button><button class="review-exclude-button" id="reviewExcludeButton" type="button">手动排除</button><button class="primary-button" id="reviewSaveCpButton" type="button">保存 CP 修改</button></div>
+        </form>
+    </dialog>
     <div class="tooltip" id="tooltip"></div>
-    <script src="cp_catalog.js?v=20260818001353"></script>
-    <script src="script.js?v=20260818001353"></script>
+    <script defer src="cp_catalog.js"></script>
+    <script defer src="script.js?v=9eb00010abc9"></script>
 </body>
 </html>
