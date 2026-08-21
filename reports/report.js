@@ -47,18 +47,37 @@
       ...[...rows].sort((a,b)=>b.works-a.works||a.cp.localeCompare(b.cp)).slice(0,5),
       ...[...rows].sort((a,b)=>Math.abs(b.work_delta)-Math.abs(a.work_delta)||a.cp.localeCompare(b.cp)).slice(0,3),
     ].map(row=>row.cp));
-    let labelIndex=0;
+    const pointRows=rows.map(row=>({
+      row,
+      px:x(row.previous_works),
+      py:y(row.works),
+      radius:4+Math.sqrt(row.authors/maxAuthors)*10,
+    }));
+    const labelPositions=new Map();
+    const minLabelY=top+9,maxLabelY=height-bottom-7,labelGap=17;
+    ["start","end"].forEach(anchor=>{
+      const items=pointRows.filter(item=>labels.has(item.row.cp)&&(item.px>left+plotWidth*.67?"end":"start")===anchor).sort((a,b)=>a.py-b.py);
+      const positions=items.map(item=>Math.max(minLabelY,Math.min(maxLabelY,item.py)));
+      for(let index=1;index<positions.length;index+=1)positions[index]=Math.max(positions[index],positions[index-1]+labelGap);
+      if(positions.length&&positions.at(-1)>maxLabelY){
+        positions[positions.length-1]=maxLabelY;
+        for(let index=positions.length-2;index>=0;index-=1)positions[index]=Math.min(positions[index],positions[index+1]-labelGap);
+      }
+      items.forEach((item,index)=>labelPositions.set(item.row.cp,{
+        anchor,
+        x:anchor==="end"?item.px-item.radius-7:item.px+item.radius+7,
+        y:positions[index],
+      }));
+    });
     const grid=ticks.map(value=>`<g class="chart-grid"><line x1="${x(value)}" y1="${top}" x2="${x(value)}" y2="${height-bottom}"></line><line x1="${left}" y1="${y(value)}" x2="${width-right}" y2="${y(value)}"></line><text x="${x(value)}" y="${height-bottom+24}" text-anchor="middle">${fmt(value)}</text><text x="${left-12}" y="${y(value)+4}" text-anchor="end">${fmt(value)}</text></g>`).join("");
-    const points=rows.map(row=>{
+    const points=pointRows.map(({row,px,py,radius})=>{
       const state=row.work_delta>0?"rise":row.work_delta<0?"fall":"steady";
-      const radius=4+Math.sqrt(row.authors/maxAuthors)*10;
-      const showLabel=labels.has(row.cp);
-      const direction=labelIndex++%2===0?1:-1;
-      const label=showLabel?`<text class="point-label" x="${x(row.previous_works)+radius+5}" y="${y(row.works)+direction*8}">${esc(row.cp)}</text>`:"";
+      const position=labelPositions.get(row.cp);
+      const label=position?`<line class="point-leader" x1="${px}" y1="${py}" x2="${position.x+(position.anchor==="end"?4:-4)}" y2="${position.y-3}"></line><text class="point-label" x="${position.x}" y="${position.y}" text-anchor="${position.anchor}">${esc(row.cp)}</text>`:"";
       const aria=`${row.cp}：同期 ${row.previous_works} 篇，本期 ${row.works} 篇，${row.authors} 位作者`;
-      return `<a href="${cpLink(row.cp)}" aria-label="${esc(aria)}"><g class="chart-point ${state}"><circle cx="${x(row.previous_works)}" cy="${y(row.works)}" r="${radius}"><title>${esc(aria)}</title></circle>${label}</g></a>`;
+      return `<a href="${cpLink(row.cp)}" aria-label="${esc(aria)}"><g class="chart-point ${state}"><circle cx="${px}" cy="${py}" r="${radius}"><title>${esc(aria)}</title></circle>${label}</g></a>`;
     }).join("");
-    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">横轴是去年同期作品数，纵轴是本期作品数。对角线上方表示增加，下方表示减少。圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-8}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="18" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 18 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div>`;
+    return `<div class="change-chart-scroll"><svg class="change-chart" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="changeChartTitle changeChartDesc"><title id="changeChartTitle">CP 本期与去年同期作品量变化图</title><desc id="changeChartDesc">横轴是去年同期作品数，纵轴是本期作品数。对角线上方表示增加，下方表示减少。圆点大小代表活跃作者数。</desc>${grid}<line class="chart-diagonal" x1="${x(0)}" y1="${y(0)}" x2="${x(maxValue)}" y2="${y(maxValue)}"></line><text class="axis-title axis-x" x="${left+plotWidth/2}" y="${height-8}" text-anchor="middle">去年同期作品数</text><text class="axis-title axis-y" x="18" y="${top+plotHeight/2}" text-anchor="middle" transform="rotate(-90 18 ${top+plotHeight/2})">本期作品数</text>${points}</svg></div><p class="mobile-chart-hint">左右滑动查看完整星图</p>`;
   }
 
   function render(report){
