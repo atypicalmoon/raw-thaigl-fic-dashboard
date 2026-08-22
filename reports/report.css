@@ -58,16 +58,15 @@ a{color:inherit}
 .section-heading h2{margin:5px 0 0;font-size:28px;font-weight:650;line-height:1.25;letter-spacing:-.025em}
 .section-heading>p{max-width:500px;margin:0;color:var(--muted);font-size:12px;line-height:1.7;text-align:right}
 
-.month-ribbon{position:relative;display:grid;grid-template-columns:repeat(var(--month-count),minmax(54px,1fr));align-items:end;gap:16px;height:240px;padding:27px 30px 14px;border:1px solid var(--line);border-radius:20px;background:var(--surface);overflow-x:auto}
-.month-ribbon::before{content:"";position:absolute;right:30px;bottom:62px;left:30px;height:1px;background:var(--line)}
-.month-ribbon article{position:relative;display:grid;grid-template-rows:1fr auto auto;gap:4px;height:100%;text-align:center}
+.month-ribbon{display:grid;grid-template-columns:repeat(var(--month-count),minmax(0,1fr));align-items:stretch;gap:14px;height:210px;padding:25px 28px 12px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.month-ribbon article{display:grid;grid-template-rows:minmax(0,1fr) 18px 16px;align-items:end;gap:2px;min-width:0;height:100%;text-align:center}
 .month-bar-wrap{display:flex;align-items:flex-end;justify-content:center;min-height:0}
-.month-bar-wrap i{display:block;width:min(46px,58%);min-height:4px;border-radius:9px 9px 2px 2px;background:linear-gradient(180deg,var(--rose-light),var(--rose))}
+.month-bar-wrap i{display:block;width:min(42px,54%);min-height:4px;border-radius:9px 9px 2px 2px;background:linear-gradient(180deg,var(--rose-light),var(--rose))}
 .month-ribbon article.peak .month-bar-wrap i{background:linear-gradient(180deg,#b94d5f,var(--wine))}
 .month-ribbon article.peak b{color:var(--wine)}
 .month-ribbon article.partial .month-bar-wrap i{background:repeating-linear-gradient(135deg,#e4aab0 0,#e4aab0 7px,#f5d8d9 7px,#f5d8d9 13px)}
-.month-ribbon b{font-size:12px;font-variant-numeric:tabular-nums}
-.month-ribbon span{color:var(--quiet);font-size:10px;white-space:nowrap}
+.month-ribbon b{min-width:0;font-size:11px;font-variant-numeric:tabular-nums;line-height:18px;white-space:nowrap}
+.month-ribbon span{min-width:0;color:var(--quiet);font-size:10px;line-height:16px;white-space:nowrap}
 
 .change-layout{display:grid;gap:12px}
 .chart-card{border:1px solid var(--line);border-radius:19px;background:var(--surface)}
@@ -267,10 +266,11 @@ tbody tr:hover{background:#fffafa}
   .section-heading{display:block;margin-bottom:17px}
   .section-heading h2{font-size:23px}
   .section-heading>p{margin-top:7px;font-size:11px;text-align:left}
-  .month-ribbon{height:205px;gap:9px;padding:20px 14px 10px}
-  .month-ribbon::before{right:14px;bottom:57px;left:14px}
-  .month-ribbon b{font-size:10px}
-  .month-ribbon span{font-size:9px}
+  .month-ribbon{grid-template-columns:repeat(var(--mobile-month-count),minmax(0,1fr));gap:8px 5px;height:auto;padding:18px 9px 9px;border-radius:14px}
+  .month-ribbon article{grid-template-rows:118px 15px 14px;height:151px}
+  .month-bar-wrap i{width:54%}
+  .month-ribbon b{font-size:9px;line-height:15px}
+  .month-ribbon span{font-size:9px;line-height:14px}
   .chart-card{padding:10px 10px 12px}
   .change-chart-scroll{margin-inline:-2px;padding-bottom:5px;overscroll-behavior-inline:contain}
   .change-chart{min-width:560px}

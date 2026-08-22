@@ -64,6 +64,8 @@
     const cpMap=Object.fromEntries(report.cps.map(row=>[row.cp,row]));
     const monthMax=Math.max(...report.months.map(row=>row.works),1);
     const peakMonth=Math.max(...report.months.map(row=>row.works));
+    const peakMonthRow=report.months.find(row=>row.works===peakMonth)||report.months[0];
+    const peakMonthLabel=peakMonthRow.label.replace(/月$/, " 月");
     const cutoffDay=Number(report.period.cutoff.slice(-2));
     const comparable=report.cps.filter(row=>row.works>0&&row.previous_works>0);
     const rising=comparable.filter(row=>row.work_delta>0).length;
@@ -104,7 +106,7 @@
         <div class="overview-grid"><article><b>${fmt(report.overview.period_works)}</b><span>本期新作</span><small>${changeText(report.overview.works_change_pct)}</small></article><article><b>${fmt(report.overview.authors)}</b><span>活跃作者</span><small>${changeText(report.overview.authors_change_pct)}</small></article><article><b>${fmt(report.overview.active_cps)}</b><span>有新作的 CP</span><small>共收录 ${fmt(report.overview.catalog_cps)} 个 CP</small></article><article><b>${fmt(report.overview.corpus_works)}</b><span>期末有效作品</span><small>只统计状态为 OK</small></article></div>
       </section>
 
-      <section class="report-section month-section"><div class="section-heading"><div><p class="section-label">月度脉冲</p><h2>创作量如何流动</h2></div></div><div class="month-ribbon" style="--month-count:${report.months.length}">${report.months.map(month=>{const partial=!month.complete;const label=partial?`${month.label} · 至 ${cutoffDay} 日`:month.label;return `<article class="${month.works===peakMonth?'peak ':''}${partial?'partial':''}" title="${esc(label)}：${fmt(month.works)} 篇"><div class="month-bar-wrap"><i style="height:${Math.max(4,month.works/monthMax*100)}%"></i></div><b>${fmt(month.works)}</b><span>${esc(label)}</span></article>`}).join("")}</div></section>
+      <section class="report-section month-section"><div class="section-heading"><div><p class="section-label">月度趋势</p><h2>${esc(peakMonthLabel)}作品量为本期最高</h2></div></div><div class="month-ribbon" style="--month-count:${report.months.length};--mobile-month-count:${Math.min(report.months.length,6)}">${report.months.map(month=>{const partial=!month.complete;const fullLabel=partial?`${month.label} · 至 ${cutoffDay} 日`:month.label;return `<article class="${month.works===peakMonth?'peak ':''}${partial?'partial':''}" title="${esc(fullLabel)}：${fmt(month.works)} 篇"><div class="month-bar-wrap"><i style="height:${Math.max(4,month.works/monthMax*100)}%"></i></div><b>${fmt(month.works)}</b><span>${esc(month.label)}</span></article>`}).join("")}</div></section>
 
       <section class="report-section change-section"><div class="section-heading"><div><p class="section-label">同期变化</p><h2>CP 同期变化</h2></div><p>仅比较两个时期均有作品的 CP；圆点大小为作者数。</p></div><div class="change-layout"><div class="chart-card">${renderChangeChart(report)}<div class="chart-legend"><span class="rise">本期增加</span><span class="fall">本期减少</span><span class="steady">持平</span><i>对角线 = 同期相同 · 坐标经压缩</i></div></div><aside class="change-notes"><dl><div><dt>同期可比</dt><dd><b>${comparable.length}</b> 个 · ${rising} 上升 · ${falling} 回落</dd></div><div><dt>未进入坐标</dt><dd>${withoutBaseline} 无同期 · ${withoutCurrent} 无新作</dd></div><div><dt>前五 CP</dt><dd>占本期 <b>${fmt(topFiveShare)}%</b></dd></div></dl></aside></div></section>
 
