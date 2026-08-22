@@ -60,7 +60,7 @@ a{color:inherit}
 
 .month-ribbon{display:grid;grid-template-columns:repeat(var(--month-count),minmax(0,1fr));align-items:stretch;gap:14px;height:210px;padding:25px 28px 12px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
 .month-ribbon article{display:grid;grid-template-rows:minmax(0,1fr) 18px 16px;align-items:end;gap:2px;min-width:0;height:100%;text-align:center}
-.month-bar-wrap{display:flex;align-items:flex-end;justify-content:center;min-height:0}
+.month-bar-wrap{display:flex;align-self:stretch;align-items:flex-end;justify-content:center;min-height:0;height:100%}
 .month-bar-wrap i{display:block;width:min(42px,54%);min-height:4px;border-radius:9px 9px 2px 2px;background:linear-gradient(180deg,var(--rose-light),var(--rose))}
 .month-ribbon article.peak .month-bar-wrap i{background:linear-gradient(180deg,#b94d5f,var(--wine))}
 .month-ribbon article.peak b{color:var(--wine)}
