@@ -158,7 +158,7 @@
 
   </div>
 </header>
-  <main class="shell">
+  <main class="shell report-loading">
     <section class="hero"><span class="eyebrow">数据截至 2026-08-10</span><h1 class="report-title"><span class="cp-name">LenaMiu</span><small>创作趋势分析</small></h1><p class="lead">完整记录区间：2024-12-20 至 2026-08-10 · 按作品首次发布时间统计</p><div class="kpis"><div class="kpi"><b>522</b><span>累计有效作品</span></div><div class="kpi"><b>320</b><span>累计创作者</span></div><div class="kpi"><b>388</b><span>2026 年新增</span></div><div class="kpi"><b>18</b><span>有新作月份</span></div></div></section>
     <section class="section timeline-section"><div class="heading"><div><span class="kicker">01 · 完整时间轴</span><h2>2025 年第四季度起记录明显增加</h2></div><p>2026 为截至 8 月 10 日的未完整年度。</p></div><div class="year-grid"><article class="year"><i style="--h:1%"></i><strong>2024</strong><b>1</b><span>12月首次记录</span></article><article class="year"><i style="--h:34%"></i><strong>2025</strong><b>133</b><span>10-12月新增112篇</span></article><article class="year"><i style="--h:100%"></i><strong>2026</strong><b>388</b><span>截至8月10日</span></article></div></section>
     <section class="section"><div class="heading"><div><span class="kicker">02 · 2026 月度变化</span><h2>1-7 月持续有新作，7 月为完整月份高点</h2></div><p>8 月仅统计前 10 天，不与完整月份直接比较。</p></div><div class="months"><div class="month"><i style="--h:93%"></i><b>62</b><span>1月</span></div><div class="month"><i style="--h:69%"></i><b>46</b><span>2月</span></div><div class="month"><i style="--h:73%"></i><b>49</b><span>3月</span></div><div class="month"><i style="--h:93%"></i><b>62</b><span>4月</span></div><div class="month"><i style="--h:64%"></i><b>43</b><span>5月</span></div><div class="month"><i style="--h:57%"></i><b>38</b><span>6月</span></div><div class="month"><i style="--h:100%"></i><b>67</b><span>7月</span></div><div class="month partial"><i style="--h:31%"></i><b>21</b><span>8月*</span></div></div><p class="note">2026 年截至 8 月 10 日共有 388 篇新作、239 位创作者。</p></section>
@@ -168,6 +168,7 @@
     <section class="end"><div class="actions"><a class="button secondary" href="index.html">查看全 CP 报告</a><a class="button" href="../index.html#focus">进入主看板</a></div><p class="method">ReadAWrite 有效作品 · 2024-12-20 - 2026-08-10 · 同链接去重 · 抓取时点快照</p></section>
   </main>
   <style>
+    .report-loading>*{display:none}.report-loading::before{display:block;padding:64px 0;color:var(--sub);font-size:12px;text-align:center;content:"正在读取最新报告…"}
     .heading>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.heading .kicker{flex:0 0 auto;margin:0}.heading h2{margin:0}.end .method{margin-top:30px!important}.end .created-by{margin:10px auto 0!important;color:var(--sub)!important;font-size:9px!important}.end .created-by strong{font-weight:600}
     @media(max-width:760px){.heading>div{gap:8px}.heading .kicker{font-size:9px}.heading h2{font-size:20px}.end .method{margin-top:28px!important}}
     :root{--line:#e9ccc9}.month-grid line{stroke:#f3e5e3}.month-line{stroke:#b94d5f}.month-line.partial-line{stroke:#d38d96}.month-point circle{stroke:#b94d5f}.month-point.partial-point circle{stroke:#d38d96}.month-point.partial-point .month-label{fill:#a46f78}.compact-author .author-meter i{background:linear-gradient(90deg,#b94d5f var(--p),#f8e8ea var(--p))}.kpi,.year,.work,.fact,.month-chart-wrap,.broadcast-details,.case,.pending{border-color:var(--line)}
@@ -646,6 +647,6 @@
   <a class="back-to-top" href="#" aria-label="返回顶部" title="返回顶部">↑</a>
   <style>.back-to-top{position:fixed;right:16px;bottom:16px;z-index:70;display:grid;width:36px;height:36px;place-items:center;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.93);box-shadow:0 8px 24px rgba(91,40,61,.1);color:var(--wine);font-size:17px;text-decoration:none}</style>
   <script src="cp-report-data.js"></script>
-  <script src="cp-report.js?v=93955aa04e7e"></script>
+  <script src="cp-report.js?v=a3a1f8ac4dc7"></script>
 </body>
 </html>

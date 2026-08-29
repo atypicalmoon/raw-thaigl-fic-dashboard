@@ -42,9 +42,11 @@
   }
 
   const data=all[requested];
+  const main=document.querySelector("main");
+  main.classList.remove("report-loading");
   if(!data){
     document.title=`${requested} 暂无报告数据｜ReadAWrite`;
-    document.querySelector("main").innerHTML=`<section class="hero compact-hero"><h1 class="report-title"><span class="cp-name">${esc(requested)}</span><small>暂无报告数据</small></h1><p class="lead">当前链接对应的 CP 不在本次报告数据范围内。</p><div class="actions"><a class="button" href="../index.html#focus">返回主看板</a></div></section>`;
+    main.innerHTML=`<section class="hero compact-hero"><h1 class="report-title"><span class="cp-name">${esc(requested)}</span><small>暂无报告数据</small></h1><p class="lead">当前链接对应的 CP 不在本次报告数据范围内。</p><div class="actions"><a class="button" href="../index.html#focus">返回主看板</a></div></section>`;
     return;
   }
 
@@ -91,6 +93,7 @@
   const cutoffParts=String(data.end||'').split('-').map(Number);
   const cutoffMonth=cutoffParts[0]===currentYear&&cutoffParts[1]?cutoffParts[1]:12;
   const cutoffDay=cutoffParts[2]||31;
+  const cutoffDisplay=String(data.dataCutoff||data.end||'未知');
   const lastMonthPartial=cutoffDay<new Date(currentYear,cutoffMonth,0).getDate();
   const monthValues=Array.from({length:cutoffMonth},(_,i)=>data.months[`${currentYear}-${String(i+1).padStart(2,"0")}`]||0);
   const step=monthValues.length>1?700/(monthValues.length-1):0;
@@ -104,8 +107,8 @@
   const events=data.events.length?data.events.map(e=>`<article class="case"><small>${esc(e.date)} · ${e.type==='broadcast'?'泰国剧播节点':'前置发布节点'}</small><h3>${esc(e.title)}</h3><p>${esc(e.note)}。</p></article>`).join(''):`<article class="pending"><small>剧播参照</small><h3>${esc(data.eventStatus||'暂无已整理的对应节点')}</h3><p>本页仍保留完整创作趋势；未找到可靠日期不代表该 CP 没有合作项目，后续更新时继续核实。</p></article>`;
   document.title=`${data.cp} 创作趋势分析｜ReadAWrite`;
   document.querySelector('meta[name="description"]').content=`${data.cp} ReadAWrite 同人创作趋势分析`;
-  document.querySelector("main").innerHTML=`
-  <section class="hero compact-hero"><h1 class="report-title"><span class="cp-name" title="${esc(data.cp)}">${esc(data.cp)}</span><small>创作趋势</small></h1><p class="lead">${data.start} — ${data.end}</p><div class="kpis"><div class="kpi"><b>${fmt(data.total)}</b><span>累计有效作品</span></div><div class="kpi"><b>${fmt(data.authors)}</b><span>累计创作者</span></div><div class="kpi"><b>${fmt(data.currentYear)}</b><span>${currentYear} 年新增</span></div><div class="kpi"><b>${fmt(data.activeMonths)}</b><span>有新作月份</span></div></div></section>
+  main.innerHTML=`
+  <section class="hero compact-hero"><h1 class="report-title"><span class="cp-name" title="${esc(data.cp)}">${esc(data.cp)}</span><small>创作趋势</small></h1><p class="lead">数据截至 ${esc(cutoffDisplay)}（泰国时间） · 记录始于 ${esc(data.start)}</p><div class="kpis"><div class="kpi"><b>${fmt(data.total)}</b><span>累计有效作品</span></div><div class="kpi"><b>${fmt(data.authors)}</b><span>累计创作者</span></div><div class="kpi"><b>${fmt(data.currentYear)}</b><span>${currentYear} 年新增</span></div><div class="kpi"><b>${fmt(data.activeMonths)}</b><span>有新作月份</span></div></div></section>
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">01 · ${currentYear} 月度变化</span></div><p>1-${cutoffMonth} 月走势 · ${cutoffMonth} 月截至 ${cutoffDay} 日</p></div>${months}<p class="note">${currentYear} 年截至 ${cutoffMonth} 月 ${cutoffDay} 日共有 ${fmt(data.currentYear)} 篇新作。</p></section>
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">02 · 剧播参照</span></div></div><details class="broadcast-details"><summary><span>${data.events.length?`${data.events.length} 个已整理节点`:esc(data.eventStatus||'暂无已核实节点')}</span><small>查看时间线</small></summary><div class="broadcast">${events}</div><details class="source-note"><summary>来源与时间口径</summary><p>由公开信息汇总；中文剧名采用 B 站主流译名。时间重合仅作观察，不代表因果。</p></details></details></section>
   <section class="section timeline-section compact-section"><div class="heading compact-heading"><div><span class="kicker">03 · 年度分布</span></div><p>最高年份重点标记 · ${currentYear} 为截至当前数据日</p></div><div class="year-grid dynamic-years">${years}</div></section>
