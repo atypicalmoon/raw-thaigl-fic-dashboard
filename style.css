@@ -139,7 +139,7 @@ html[data-theme="white"] body{--bg-page:#fff;--bg-card:#fff;--bg-soft:#fafafa;--
 /* Mobile density preview: four metrics read as one quiet ledger. */
 @media(max-width:720px){
     .site-header{padding-block:14px}
-    .brand strong{max-width:none;font-size:13px;letter-spacing:0}
+    .brand strong{max-width:clamp(82px,calc(100vw - 184px),230px);font-size:13px;letter-spacing:0}
     main{padding-inline:18px}
 
     .kpi-grid{gap:0;margin:24px 0 24px;overflow:hidden;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.86);box-shadow:var(--shadow-card)}
