@@ -828,8 +828,6 @@ function bindEvents() {
     const themeToggle = document.getElementById("themeToggle");
     const syncThemeToggle = () => {
         const whiteMode = document.documentElement.dataset.theme === "white";
-        const themeIcon = themeToggle.querySelector(".header-icon");
-        if (themeIcon) themeIcon.textContent = whiteMode ? "○" : "◐";
         themeToggle.setAttribute("aria-pressed", String(whiteMode));
         themeToggle.setAttribute("aria-label", whiteMode ? "恢复默认" : "简洁模式");
         themeToggle.title = whiteMode ? "恢复默认" : "简洁模式";
@@ -1159,13 +1157,13 @@ function updateKPIs(rows) {
     const excludedTotal = Number(window.DASHBOARD_META?.excluded_articles) || Math.max(0, sourceTotal - dataAfterStatus.length);
     document.getElementById("kpiArticleLabel").innerText = hasActiveFilter ? "筛选结果" : "有效作品";
     document.getElementById("kpiQualityNote").innerText = hasActiveFilter ?
-        `全站有效作品 ${baseOkArticleCount.toLocaleString()} 篇` :
-        `全量清洗 ${sourceTotal.toLocaleString()} 篇 · 排除 ${excludedTotal.toLocaleString()} 篇`;
+        `全站有效 ${baseOkArticleCount.toLocaleString()}` :
+        `清洗 ${sourceTotal.toLocaleString()} · 排除 ${excludedTotal.toLocaleString()}`;
     document.getElementById("kpiTotalLikes").innerText = formatNumber(totalLikes);
-    document.getElementById("kpiLikesNote").innerText = hasActiveFilter ? "当前结果合计" : "全部有效作品合计";
+    document.getElementById("kpiLikesNote").innerText = hasActiveFilter ? "当前结果合计" : "有效作品合计";
     document.getElementById("kpiTotalCPs").innerText = distinctCPs;
     document.getElementById("kpiCpLabel").innerText = hasActiveFilter ? "覆盖 CP" : "有作品 CP";
-    document.getElementById("kpiTopCP").innerText = hasActiveFilter ? `全站预设收录 ${dictionaryTotal} 个 CP` : `预设收录 ${dictionaryTotal} 个 · ${uncollectedTotal} 个暂无作品`;
+    document.getElementById("kpiTopCP").innerText = hasActiveFilter ? `全站收录 ${dictionaryTotal}` : `收录 ${dictionaryTotal} · 暂无作品 ${uncollectedTotal}`;
     document.getElementById("kpiTimeSpan").innerText = timeSpan;
     document.getElementById("kpiEndRate").innerText = `完结率 ${endRate}`;
     const companyText = state.companies.size === companyToCps.size ? "全部公司" : `${state.companies.size}家公司`;
