@@ -41,10 +41,10 @@ a{color:inherit}
 .eyebrow,.section-label{margin:0;color:var(--wine);font-size:11px;font-weight:800;letter-spacing:.12em}
 .hero-copy h1,.index-hero h1{margin:10px 0 18px;font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:clamp(42px,6vw,60px);font-weight:600;line-height:1.14;letter-spacing:-.03em}
 .hero-copy h1 span{color:var(--wine);font-weight:500}
-.hero-copy>p:last-child,.index-hero>p:last-child{max-width:700px;margin:0;color:var(--muted);font-size:15px;line-height:1.75}
+.hero-copy>p:last-child{max-width:700px;margin:0;color:var(--muted);font-size:15px;line-height:1.75}
 .hero-period{align-self:start;padding:18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,250,248,.82)}
 .hero-period span,.hero-period small{display:block;color:var(--quiet);font-size:11px}
-.hero-period b{display:block;margin:7px 0;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.55;white-space:nowrap}
+.hero-period b{display:block;margin:7px 0;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.55}
 .overview-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);margin-top:34px;border-top:1px solid var(--line)}
 .overview-grid article{padding:23px 20px 27px;border-right:1px solid var(--line)}
 .overview-grid article:last-child{border-right:0}
@@ -63,6 +63,7 @@ a{color:inherit}
 .month-bar-wrap{display:flex;align-self:stretch;align-items:flex-end;justify-content:center;min-height:0;height:100%}
 .month-bar-wrap i{display:block;width:min(42px,54%);min-height:4px;border-radius:9px 9px 2px 2px;background:linear-gradient(180deg,var(--rose-light),var(--rose))}
 .month-ribbon article.peak .month-bar-wrap i{background:linear-gradient(180deg,#b94d5f,var(--wine))}
+.period-note{margin:8px 0 0;color:var(--quiet);font-size:11px}
 .month-ribbon article.peak b{color:var(--wine)}
 .month-ribbon article.partial .month-bar-wrap i{background:repeating-linear-gradient(135deg,#e4aab0 0,#e4aab0 7px,#f5d8d9 7px,#f5d8d9 13px)}
 .month-ribbon b{min-width:0;font-size:11px;font-variant-numeric:tabular-nums;line-height:18px;white-space:nowrap}
@@ -209,7 +210,7 @@ tbody tr:hover{background:#fffafa}
 .loading-card p{color:var(--muted)}
 
 .index-main{padding-bottom:70px}
-.index-hero{padding:76px 0 58px;border-bottom:1px solid var(--line)}
+.index-hero{padding:56px 0 38px;border-bottom:1px solid var(--line)}
 .index-hero h1{margin-bottom:14px}
 .index-main>section:not(.index-hero){padding-top:50px}
 .archive-section{margin-top:10px}

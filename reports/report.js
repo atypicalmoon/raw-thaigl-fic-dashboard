@@ -12,7 +12,7 @@
 
   if(!selected){
     selector.hidden=true;
-    app.innerHTML='<section class="loading-card"><h1>尚未发布自动报告</h1><p>请返回报告目录查看已有的人工存档。</p><a class="button" href="index.html">返回全部报告</a></section>';
+    app.innerHTML='<section class="loading-card"><h1>暂无半年或年度报告</h1><p>可返回报告目录浏览专题报告。</p><a class="button" href="index.html">返回全部报告</a></section>';
     return;
   }
 
@@ -21,7 +21,7 @@
   const script=document.createElement("script");
   script.src=`data/report-${encodeURIComponent(selected.slug)}.js${selected.version?`?v=${encodeURIComponent(selected.version)}`:""}`;
   script.onload=()=>render(window.FULL_REPORT_DATA);
-  script.onerror=()=>{app.innerHTML='<section class="loading-card"><h1>报告数据没有找到</h1><p>目录记录存在，但对应的数据文件未能加载。请重新生成并发布报告。</p></section>'};
+  script.onerror=()=>{app.innerHTML='<section class="loading-card"><h1>报告暂时无法加载</h1><p>请刷新重试，或查看其他报告。</p><a class="button" href="index.html">返回全部报告</a></section>'};
   document.head.append(script);
 
   function changeText(value){
@@ -56,7 +56,7 @@
 
   function render(report){
     if(!report||report.period?.slug!==selected.slug){
-      app.innerHTML='<section class="loading-card"><h1>报告数据不一致</h1><p>请重新生成并审计这份报告。</p></section>';
+      app.innerHTML='<section class="loading-card"><h1>报告暂时无法显示</h1><p>请刷新重试，或查看其他报告。</p><a class="button" href="index.html">返回全部报告</a></section>';
       return;
     }
 
@@ -101,12 +101,12 @@
 
     app.innerHTML=`
       <section class="report-hero">
-        <div class="hero-copy"><p class="eyebrow">${esc(report.period.label)} · 数据快照</p><h1>泰百同人创作<br><span>阶段切面</span></h1><p>${esc(report.summary[0])}</p></div>
+        <div class="hero-copy"><p class="eyebrow">${esc(report.period.label)}</p><h1>泰百同人<br><span>创作报告</span></h1><p>${esc(report.summary[0])}</p></div>
         <div class="hero-period"><span>统计区间</span><b>${esc(report.period.start)} - ${esc(report.period.cutoff)}</b><small>数据最新至 ${esc(report.period.source_latest)}</small></div>
-        <div class="overview-grid"><article><b>${fmt(report.overview.period_works)}</b><span>本期新作</span><small>${changeText(report.overview.works_change_pct)}</small></article><article><b>${fmt(report.overview.authors)}</b><span>活跃作者</span><small>${changeText(report.overview.authors_change_pct)}</small></article><article><b>${fmt(report.overview.active_cps)}</b><span>有新作的 CP</span><small>共收录 ${fmt(report.overview.catalog_cps)} 个 CP</small></article><article><b>${fmt(report.overview.corpus_works)}</b><span>期末有效作品</span><small>只统计状态为 OK</small></article></div>
+        <div class="overview-grid"><article><b>${fmt(report.overview.period_works)}</b><span>本期新作</span><small>${changeText(report.overview.works_change_pct)}</small></article><article><b>${fmt(report.overview.authors)}</b><span>活跃作者</span><small>${changeText(report.overview.authors_change_pct)}</small></article><article><b>${fmt(report.overview.active_cps)}</b><span>有新作的 CP</span><small>共收录 ${fmt(report.overview.catalog_cps)} 个 CP</small></article><article><b>${fmt(report.overview.corpus_works)}</b><span>期末累计作品</span><small>含报告期之前发布的作品</small></article></div>
       </section>
 
-      <section class="report-section month-section"><div class="section-heading"><div><p class="section-label">月度趋势</p><h2>${esc(peakMonthLabel)}作品量为本期最高</h2></div></div><div class="month-ribbon" style="--month-count:${report.months.length};--mobile-month-count:${Math.min(report.months.length,6)}">${report.months.map(month=>{const partial=!month.complete;const fullLabel=partial?`${month.label} · 至 ${cutoffDay} 日`:month.label;return `<article class="${month.works===peakMonth?'peak ':''}${partial?'partial':''}" title="${esc(fullLabel)}：${fmt(month.works)} 篇"><div class="month-bar-wrap"><i style="height:${Math.max(4,month.works/monthMax*100)}%"></i></div><b>${fmt(month.works)}</b><span>${esc(month.label)}</span></article>`}).join("")}</div></section>
+      <section class="report-section month-section"><div class="section-heading"><div><p class="section-label">月度趋势</p><h2>${esc(peakMonthLabel)}作品量为本期最高</h2></div></div><div class="month-ribbon" style="--month-count:${report.months.length};--mobile-month-count:${Math.min(report.months.length,6)}">${report.months.map(month=>{const partial=!month.complete;const fullLabel=partial?`${month.label} · 至 ${cutoffDay} 日`:month.label;return `<article class="${month.works===peakMonth?'peak ':''}${partial?'partial':''}" title="${esc(fullLabel)}：${fmt(month.works)} 篇"><div class="month-bar-wrap"><i style="height:${Math.max(4,month.works/monthMax*100)}%"></i></div><b>${fmt(month.works)}</b><span>${esc(month.label)}${partial?"*":""}</span></article>`}).join("")}</div>${report.months.some(month=>!month.complete)?`<p class="period-note">* 数据截至 ${cutoffDay} 日，非完整月份。</p>`:""}</section>
 
       <section class="report-section change-section"><div class="section-heading"><div><p class="section-label">同期变化</p><h2>CP 同期变化</h2></div><p>仅比较两个时期均有作品的 CP；圆点大小为作者数。</p></div><div class="change-layout"><div class="chart-card">${renderChangeChart(report)}<div class="chart-legend"><span class="rise">本期增加</span><span class="fall">本期减少</span><span class="steady">持平</span><i>对角线 = 同期相同 · 坐标经压缩</i></div></div><aside class="change-notes"><dl><div><dt>同期可比</dt><dd><b>${comparable.length}</b> 个 · ${rising} 上升 · ${falling} 回落</dd></div><div><dt>未进入坐标</dt><dd>${withoutBaseline} 无同期 · ${withoutCurrent} 无新作</dd></div><div><dt>前五 CP</dt><dd>占本期 <b>${fmt(topFiveShare)}%</b></dd></div></dl></aside></div></section>
 
@@ -118,9 +118,9 @@
 
       <section class="report-section"><div class="section-heading"><div><p class="section-label">事件对照</p><h2>已核实事件</h2></div><p>事件前后作品量对照，不代表因果。</p></div>${report.events.length?`<details class="event-details" id="eventDetails"><summary><span><b>${report.events.length} 条事件</b><small>前后 30 日作品量</small></span><em>展开</em></summary><div class="event-list" id="eventList"></div></details>`:'<p class="empty-note">本期没有日期精确且已核实的事件记录。</p>'}</section>
 
-      <section class="report-section data-section"><details class="data-details"><summary><span><b>全部 CP 数据</b><small>搜索、排序与核对</small></span><em>${report.cps.length} 个 CP</em></summary><div class="data-details-body"><div class="table-tools"><input id="cpSearch" type="search" placeholder="搜索 CP 或当前归类" aria-label="搜索 CP 或当前归类"><select id="cpSort" aria-label="选择排序指标"><option value="works">按作品数排序</option><option value="authors">按作者数排序</option><option value="work_delta">按同期增量排序</option><option value="growth_pct">按同期增长率排序</option><option value="median_likes">按点赞中位数排序</option><option value="median_views">按阅读中位数排序</option><option value="completion_rate">按完结率排序</option><option value="cp">按 CP 名称排序</option></select></div><p class="table-count" id="tableCount"></p><div class="table-scroll"><table><thead><tr><th>CP</th><th>当前归类</th><th>作品</th><th>作者</th><th>活跃月</th><th>同期作品</th><th>增量</th><th>增长率</th><th>点赞中位数</th><th>阅读中位数</th><th>完结率</th></tr></thead><tbody id="cpTableBody"></tbody></table></div></div></details></section>
+      <section class="report-section data-section"><details class="data-details"><summary><span><b>全部 CP 数据</b><small>搜索与排序</small></span><em>${report.cps.length} 个 CP</em></summary><div class="data-details-body"><div class="table-tools"><input id="cpSearch" type="search" placeholder="搜索 CP 或当前归类" aria-label="搜索 CP 或当前归类"><select id="cpSort" aria-label="选择排序指标"><option value="works">按作品数排序</option><option value="authors">按作者数排序</option><option value="work_delta">按同期增量排序</option><option value="growth_pct">按同期增长率排序</option><option value="median_likes">按点赞中位数排序</option><option value="median_views">按阅读中位数排序</option><option value="completion_rate">按完结率排序</option><option value="cp">按 CP 名称排序</option></select></div><p class="table-count" id="tableCount"></p><div class="table-scroll"><table><thead><tr><th>CP</th><th>当前归类</th><th>作品</th><th>作者</th><th>活跃月</th><th>同期作品</th><th>增量</th><th>增长率</th><th>点赞中位数</th><th>阅读中位数</th><th>完结率</th></tr></thead><tbody id="cpTableBody"></tbody></table></div></div></details></section>
 
-      <section class="method-section"><details><summary>数据口径与自动筛选规则</summary><ul>${Object.values(report.method).map(item=>`<li>${esc(item)}</li>`).join("")}</ul></details><div class="report-actions"><a class="button secondary" href="index.html">全部报告</a><a class="button" href="../index.html#focus">进入主看板</a></div></section>`;
+      <section class="method-section"><details><summary>数据口径</summary><ul>${Object.entries(report.method).map(([key,item])=>`<li>${esc(key==="status"?"仅统计收录的有效作品。":item)}</li>`).join("")}</ul></details><div class="report-actions"><a class="button secondary" href="index.html">全部报告</a><a class="button" href="../index.html#focus">进入主看板</a></div></section>`;
 
     const body=document.getElementById("cpTableBody");
     const search=document.getElementById("cpSearch");
@@ -132,7 +132,7 @@
       const term=search.value.trim().toLocaleLowerCase();
       const key=sort.value;
       const visible=report.cps.filter(row=>!term||`${row.cp} ${row.company}`.toLocaleLowerCase().includes(term)).sort((a,b)=>key==="cp"?a.cp.localeCompare(b.cp):((b[key]??-Infinity)-(a[key]??-Infinity)||b.works-a.works||a.cp.localeCompare(b.cp)));
-      count.textContent=`显示 ${visible.length} / ${report.cps.length} 个预设 CP`;
+      count.textContent=`显示 ${visible.length} / ${report.cps.length} 个 CP`;
       body.innerHTML=visible.map(row=>`<tr><th><a href="${cpLink(row.cp)}">${esc(row.cp)}</a></th><td>${esc(row.company)}</td><td>${fmt(row.works)}</td><td>${fmt(row.authors)}</td><td>${fmt(row.active_months)}</td><td>${fmt(row.previous_works)}</td><td>${signed(row.work_delta)}</td><td>${pct(row.growth_pct)}</td><td>${fmt(row.median_likes)}</td><td>${fmt(row.median_views)}</td><td>${row.completion_rate===null?'—':`${fmt(row.completion_rate)}%`}</td></tr>`).join("");
     };
     search.addEventListener("input",drawTable);

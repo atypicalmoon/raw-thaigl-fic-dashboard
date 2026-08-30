@@ -112,9 +112,27 @@ html[data-theme="white"] body{--bg-page:#fff;--bg-card:#fff;--bg-soft:#fafafa;--
 
 /* Prevent long legends and chart contents from defining the mobile card width. */
 .trend-split-container,.trend-sub-card{min-width:0}
+#growthTotalChart,#growthChart,#cpBarChart,#likesChart{display:block;width:100%;max-width:100%}
+.trend-sub-title{flex-wrap:wrap}
+.trend-sub-title>span:first-child{flex-shrink:0}
+#totalTrendMeta{margin-left:auto;text-align:right;overflow-wrap:anywhere}
+.trend-controls{flex-shrink:0}
+.trend-range-note{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;margin:-5px 0 12px;color:var(--text-sub);font-size:10px}
+.trend-plot{position:relative;min-width:0;background:inherit}
+.trend-scroll{width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.trend-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.trend-scroll #growthTotalChart,.trend-scroll #growthChart{width:var(--trend-width,100%);max-width:none}
+.trend-y-axis{position:absolute;top:0;left:0;background:inherit;pointer-events:none}
+.trend-y-axis[hidden]{display:none}
+#growthLegend .growth-legend-row{flex:0 0 auto;border:0;background:transparent;padding:3px 0;font:inherit;text-align:left;white-space:nowrap}
+#growthLegend .growth-legend-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:520px){
+    #growthCard>.card-header{flex-wrap:wrap;gap:9px}
+    #growthCard .trend-controls{margin-left:auto;gap:6px}
+    #growthCard .trend-controls select{min-width:0}
+}
 @media(max-width:720px){
     #growthLegend{width:100%;max-width:100%}
-    #growthTotalChart,#growthChart{display:block;width:100%;max-width:100%}
 }
 
 /* Compact chart headings and mobile reading behavior. */
@@ -156,14 +174,15 @@ html[data-theme="white"] body{--bg-page:#fff;--bg-card:#fff;--bg-soft:#fafafa;--
     .filter-header-bar small{display:none!important}
 
     .section-heading{align-items:center;flex-direction:row;margin:0 0 14px}
-    .section-heading .section-kicker,.section-heading>.interaction-tip{display:none}
+    .section-heading .section-kicker{display:block}
+    .section-heading>.interaction-tip{display:flex}
     .section-heading h2{margin:0;font-size:22px}
 
     .card{padding:17px 15px}
     .card-header{align-items:center;margin-bottom:10px}
-    .card-header>div{display:block}
+    .card-header>div{display:flex}
     .card h3{font-size:16px}
-    .card-header .sub{display:none}
+    .card-header .sub{display:block}
     .card-header select{min-height:38px}
 }
 

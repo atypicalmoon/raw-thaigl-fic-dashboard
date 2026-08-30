@@ -87,7 +87,6 @@
   // 页面渲染逻辑保持不变
   // ────────────────────────────────────────────────────────────
   const fmt=n=>Number(n||0).toLocaleString("zh-CN");
-  const maxMonth=Math.max(1,...Object.values(data.months));
   const yearEntries=Object.entries(data.years); const maxYear=Math.max(1,...yearEntries.map(x=>x[1]));
   const currentYear=Number(data.currentYearLabel)||Number(String(data.end||'').slice(0,4))||new Date().getFullYear();
   const cutoffParts=String(data.end||'').split('-').map(Number);
@@ -96,25 +95,56 @@
   const cutoffDisplay=String(data.dataCutoff||data.end||'未知');
   const lastMonthPartial=cutoffDay<new Date(currentYear,cutoffMonth,0).getDate();
   const monthValues=Array.from({length:cutoffMonth},(_,i)=>data.months[`${currentYear}-${String(i+1).padStart(2,"0")}`]||0);
-  const step=monthValues.length>1?700/(monthValues.length-1):0;
-  const monthPoints=monthValues.map((v,i)=>({x:50+i*step,y:142-(v/maxMonth)*94,v,label:`${i+1}月${lastMonthPartial&&i===monthValues.length-1?'*':''}`}));
-  const solidPoints=(lastMonthPartial?monthPoints.slice(0,-1):monthPoints).map(p=>`${p.x},${p.y}`).join(' ');
-  const partialPoints=lastMonthPartial?monthPoints.slice(-2).map(p=>`${p.x},${p.y}`).join(' '):'';
-  const months=`<div class="month-chart-wrap"><svg class="month-line-chart" viewBox="0 0 800 198" role="img" aria-label="${esc(data.cp)} ${currentYear} 年 1 月至 ${cutoffMonth} 月新增作品走势"><g class="month-grid"><line x1="50" y1="48" x2="750" y2="48"/><line x1="50" y1="95" x2="750" y2="95"/><line x1="50" y1="142" x2="750" y2="142"/></g><polyline class="month-line" points="${solidPoints}"/>${lastMonthPartial?`<polyline class="month-line partial-line" points="${partialPoints}"/>`:''}${monthPoints.map((p,i)=>`<g class="month-point ${lastMonthPartial&&i===monthPoints.length-1?'partial-point':''}"><circle cx="${p.x}" cy="${p.y}" r="5"/><text class="month-value" x="${p.x}" y="${Math.max(18,p.y-13)}">${fmt(p.v)}</text><text class="month-label" x="${p.x}" y="177">${p.label}</text></g>`).join('')}</svg></div>`;
+  // 按实际绘图区绘制，保留零基线；只用当前展示年份确定上限。
+  function monthChartGeometry(values,width,height,compact) {
+    const peak=Math.max(0,...values);
+    const interval=peak>=100?50:peak>=10?5:1;
+    const maximum=Math.max(1,Math.ceil(peak*1.1/interval)*interval);
+    const left=compact?14:width/16;
+    const right=width-left;
+    const top=height*26/160;
+    const bottom=height*.75;
+    return {left,right,top,bottom,maximum,points:values.map((v,i)=>({
+      x:values.length>1?left+i*(right-left)/(values.length-1):width/2,
+      y:bottom-v/maximum*(bottom-top),v
+    }))};
+  }
+  const months=`<div class="month-chart-wrap"><svg class="month-line-chart" viewBox="0 0 800 198" role="img" aria-label="${esc(data.cp)} ${currentYear} 年 1 月至 ${cutoffMonth} 月新增作品走势，纵轴从零起"></svg></div>`;
   const years=yearEntries.map(([y,v])=>`<article class="year ${v===maxYear?'peak':''}"><i style="--h:${Math.max(2,Math.round(v/maxYear*100))}%"></i><strong>${y}</strong><b>${fmt(v)}</b><span>${Number(y)===currentYear?`截至${cutoffMonth}月${cutoffDay}日`:'年度新增'}</span></article>`).join("");
   const works=data.works.map(w=>`<a class="work compact-work discovery-work" href="${esc(w.url)}" target="_blank" rel="noopener"><div class="work-head"><em title="${esc(w.label)}">${esc(w.label)}</em><h3 title="${esc(w.title)}">${esc(w.title)}</h3><i aria-hidden="true">↗</i></div><p class="work-meta" title="${esc(w.author)}">${esc(w.author)} · ${fmt(w.chapters)} 章 · ${w.ended?'已完结':'连载中'}</p><div class="work-stats"><span><b>${fmt(w.likes)}</b>赞</span><span><b>${fmt(w.views)}</b>阅读</span></div></a>`).join("")||`<p class="empty-copy">当前数据范围内暂无有效作品。</p>`;
   const authors=data.authorCards.map(a=>{const titles=(a.representativeWorks||[]).map(w=>`<a href="${esc(w.url)}" target="_blank" rel="noopener" title="${esc(w.title)}">“${esc(w.title)}”</a>`).join('<i>·</i>');return `<article class="fact compact-author author-profile"><div class="author-head"><b class="author-name" title="${esc(a.name)}">${esc(a.name)}</b>${titles?`<span class="author-works">${titles}</span>`:''}</div><div class="author-stats"><span><b>${fmt(a.works)}</b>作品</span><span><b>${fmt(a.avgLikes)}</b>赞/篇</span><span><b>${fmt(a.avgViews)}</b>阅读/篇</span></div><div class="author-sparks">${['产出','点赞','阅读'].map((label,i)=>`<span><em>${label}</em><i><b style="width:${a.scores[i]}%"></b></i></span>`).join('')}</div></article>`}).join("")||`<p class="empty-copy">有效作者样本较少，暂不展示作者卡。</p>`;
-  const events=data.events.length?data.events.map(e=>`<article class="case"><small>${esc(e.date)} · ${e.type==='broadcast'?'泰国剧播节点':'前置发布节点'}</small><h3>${esc(e.title)}</h3><p>${esc(e.note)}。</p></article>`).join(''):`<article class="pending"><small>剧播参照</small><h3>${esc(data.eventStatus||'暂无已整理的对应节点')}</h3><p>本页仍保留完整创作趋势；未找到可靠日期不代表该 CP 没有合作项目，后续更新时继续核实。</p></article>`;
+  const events=data.events.length?data.events.map(e=>`<article class="case"><small>${esc(e.date)} · ${e.type==='broadcast'?'泰国剧播节点':'前置发布节点'}</small><h3>${esc(e.title)}</h3><p>${esc(e.note)}。</p></article>`).join(''):`<article class="pending"><small>剧播参照</small><h3>${esc(data.eventStatus||'暂无已整理的对应节点')}</h3><p>暂无可靠日期记录，不代表没有合作项目。</p></article>`;
   document.title=`${data.cp} 创作趋势分析｜ReadAWrite`;
   document.querySelector('meta[name="description"]').content=`${data.cp} ReadAWrite 同人创作趋势分析`;
   main.innerHTML=`
   <section class="hero compact-hero"><h1 class="report-title"><span class="cp-name" title="${esc(data.cp)}">${esc(data.cp)}</span><small>创作趋势</small></h1><p class="lead">数据截至 ${esc(cutoffDisplay)}（泰国时间） · 记录始于 ${esc(data.start)}</p><div class="kpis"><div class="kpi"><b>${fmt(data.total)}</b><span>累计有效作品</span></div><div class="kpi"><b>${fmt(data.authors)}</b><span>累计创作者</span></div><div class="kpi"><b>${fmt(data.currentYear)}</b><span>${currentYear} 年新增</span></div><div class="kpi"><b>${fmt(data.activeMonths)}</b><span>有新作月份</span></div></div></section>
-  <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">01 · ${currentYear} 月度变化</span></div><p>1-${cutoffMonth} 月走势 · ${cutoffMonth} 月截至 ${cutoffDay} 日</p></div>${months}<p class="note">${currentYear} 年截至 ${cutoffMonth} 月 ${cutoffDay} 日共有 ${fmt(data.currentYear)} 篇新作。</p></section>
+  <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">01 · ${currentYear} 月度新增</span></div><p>${lastMonthPartial?`${cutoffMonth} 月未完整（虚线）`:''}</p></div>${months}<p class="note">按首发月统计 · 截至 ${cutoffMonth}/${cutoffDay} 共 ${fmt(monthValues.reduce((sum,v)=>sum+v,0))} 篇</p></section>
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">02 · 剧播参照</span></div></div><details class="broadcast-details"><summary><span>${data.events.length?`${data.events.length} 个已整理节点`:esc(data.eventStatus||'暂无已核实节点')}</span><small>查看时间线</small></summary><div class="broadcast">${events}</div><details class="source-note"><summary>来源与时间口径</summary><p>由公开信息汇总；中文剧名采用 B 站主流译名。时间重合仅作观察，不代表因果。</p></details></details></section>
-  <section class="section timeline-section compact-section"><div class="heading compact-heading"><div><span class="kicker">03 · 年度分布</span></div><p>最高年份重点标记 · ${currentYear} 为截至当前数据日</p></div><div class="year-grid dynamic-years">${years}</div></section>
+  <section class="section timeline-section compact-section"><div class="heading compact-heading"><div><span class="kicker">03 · 年度分布</span></div><p>${currentYear} 年截至 ${cutoffMonth} 月 ${cutoffDay} 日</p></div><div class="year-grid dynamic-years">${years}</div></section>
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">04 · 作品发现</span></div></div><div class="works">${works}</div></section>
   <section class="section compact-section"><div class="heading compact-heading"><div><span class="kicker">05 · 创作者观察</span></div></div><div class="facts author-facts">${authors}</div></section>
   <section class="end"><div class="actions"><a class="button secondary" href="index.html">全 CP 报告</a><a class="button" href="../index.html#focus">主看板</a></div><p class="method">ReadAWrite 有效作品 · ${data.start} — ${data.end} · 同链接去重</p><p class="created-by">Created by <strong>Atypical</strong> · With <strong>Codex</strong></p></section>`;
+  const monthSvg=main.querySelector('.month-line-chart');
+  let lastMonthSize='';
+  function drawMonthChart() {
+    const {width,height}=monthSvg.getBoundingClientRect();
+    if(!width||!height)return;
+    const compact=window.matchMedia('(max-width:760px)').matches;
+    const size=`${width}:${height}:${compact}`;
+    if(size===lastMonthSize)return;
+    lastMonthSize=size;
+    const {left,right,top,bottom,points}=monthChartGeometry(monthValues,width,height,compact);
+    const linePoints=items=>items.map(p=>`${p.x},${p.y}`).join(' ');
+    const solidPoints=linePoints(lastMonthPartial?points.slice(0,-1):points);
+    const partialPoints=lastMonthPartial?linePoints(points.slice(-2)):'';
+    monthSvg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    monthSvg.innerHTML=`<g class="month-grid">${[top,(top+bottom)/2,bottom].map(y=>`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`).join('')}</g><polyline class="month-line" points="${solidPoints}"/>${lastMonthPartial?`<polyline class="month-line partial-line" points="${partialPoints}"/>`:''}${points.map((p,i)=>{
+      const partial=lastMonthPartial&&i===points.length-1;
+      return `<g class="month-point ${partial?'partial-point':''}"><title>${i+1} 月：${fmt(p.v)} 篇${partial?'（未完整）':''}</title><circle cx="${p.x}" cy="${p.y}" r="${compact?1.8:3}"/><text class="month-value" x="${p.x}" y="${p.y-(compact?9:12)}">${fmt(p.v)}</text><text class="month-label" x="${p.x}" y="${height-18}">${i+1}月${partial?'*':''}</text></g>`;
+    }).join('')}`;
+  }
+  drawMonthChart();
+  new ResizeObserver(drawMonthChart).observe(monthSvg);
 })();
 
 /* =========================================================

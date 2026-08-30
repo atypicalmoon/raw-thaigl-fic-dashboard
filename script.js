@@ -337,6 +337,7 @@ let cpBarG = null;
 let likesG = null;
 let growthTotalG = null;
 let growthCpG = null;
+let growthScrollKey = "";
 
 let state = {
     cps: new Set(),
@@ -370,6 +371,20 @@ function continuousMonths(rows) {
         if (month === 13) { month = 1; year++; }
     }
     return months;
+}
+
+// Rolling windows are anchored to the dataset, not the device clock or a CP's last work.
+function growthMonthDomain(rows, range, cutoff) {
+    if (range === "all") return continuousMonths(rows);
+    const end = String(cutoff || "").slice(0, 7) || continuousMonths(rows).at(-1);
+    if (!end) return [];
+    const [year, month] = end.split("-").map(Number);
+    const count = range === "12" ? 12 : 24;
+    const endIndex = year * 12 + month - 1;
+    return Array.from({ length: count }, (_, i) => {
+        const index = endIndex - count + 1 + i;
+        return `${Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}`;
+    });
 }
 
 function showTooltip(html, event) {
@@ -1097,6 +1112,14 @@ function bindEvents() {
         drawHeatmap(getFilteredRows());
     };
     document.getElementById("growthTopNSelect").onchange = () => drawGrowthChart(getFilteredRows());
+    document.getElementById("growthRangeSelect").onchange = () => drawGrowthChart(getFilteredRows());
+    const trendScrollers = [document.getElementById("growthTotalScroll"), document.getElementById("growthCpScroll")];
+    trendScrollers.forEach(scroller => scroller.addEventListener("scroll", () => {
+        hideTooltip();
+        trendScrollers.forEach(other => {
+            if (other !== scroller && Math.abs(other.scrollLeft - scroller.scrollLeft) > 1) other.scrollLeft = scroller.scrollLeft;
+        });
+    }, { passive: true }));
     document.getElementById("cpBarTopNSelect").onchange = () => drawCpBar(getFilteredRows());
     document.getElementById("likesTopNSelect").onchange = () => drawLikesChart(getFilteredRows());
     document.getElementById("resetBtn").onclick = () => {
@@ -1153,12 +1176,10 @@ function updateKPIs(rows) {
         state.tiers.size !== TIER_ORDER.length ||
         state.customLikeMin !== null || state.customLikeMax !== null;
     document.getElementById("kpiTotalArticles").innerText = totalArticles.toLocaleString();
-    const sourceTotal = Number(window.DASHBOARD_META?.all_articles) || dataAfterStatus.length;
-    const excludedTotal = Number(window.DASHBOARD_META?.excluded_articles) || Math.max(0, sourceTotal - dataAfterStatus.length);
     document.getElementById("kpiArticleLabel").innerText = hasActiveFilter ? "筛选结果" : "有效作品";
     document.getElementById("kpiQualityNote").innerText = hasActiveFilter ?
         `全站有效 ${baseOkArticleCount.toLocaleString()}` :
-        `清洗 ${sourceTotal.toLocaleString()} · 排除 ${excludedTotal.toLocaleString()}`;
+        "按首次发布时间统计";
     document.getElementById("kpiTotalLikes").innerText = formatNumber(totalLikes);
     document.getElementById("kpiLikesNote").innerText = hasActiveFilter ? "当前结果合计" : "有效作品合计";
     document.getElementById("kpiTotalCPs").innerText = distinctCPs;
@@ -1261,19 +1282,43 @@ function syncFocusSelectAndDraw(rows) {
 // 🚀 性能优化 3：全站大盘趋势图改为橙色渐变，并用透明的大半径圆做悬浮响应区（不再画可见圆点）。
 // 同时用持久化 <g> + key-joined 元素代替每次 selectAll("*").remove() 全量重建，减少 DOM 抖动。
 function drawGrowthChart(rows) {
-    const valid = rows.filter(d => d.month_year);
-    const months = continuousMonths(valid);
+    const range = document.getElementById("growthRangeSelect").value;
+    const cutoffText = window.DASHBOARD_META?.data_cutoff || continuousMonths(dataAfterStatus).at(-1) || "";
+    const months = growthMonthDomain(rows, range, cutoffText);
+    const valid = rows.filter(d => d.month_year && d.month_year >= months[0] && d.month_year <= months.at(-1));
 
     const totalSvg = d3.select("#growthTotalChart");
     const cpSvg = d3.select("#growthChart");
+    const totalScroller = document.getElementById("growthTotalScroll");
+    const cpScroller = document.getElementById("growthCpScroll");
+    const viewportWidth = Math.floor(totalScroller.getBoundingClientRect().width);
+    if (!viewportWidth) return;
+    const previousMaxScroll = totalScroller.scrollWidth - viewportWidth;
+    const scrollRatio = previousMaxScroll > 0 ? totalScroller.scrollLeft / previousMaxScroll : 1;
+    const scrollKey = `${range}|${months[0]}|${months.at(-1)}`;
+    const width = range === "all" && valid.length ? Math.max(viewportWidth, (months.length - 1) * 32 + 65) : viewportWidth;
+    document.getElementById("growthCard").style.setProperty("--trend-width", `${width}px`);
+    document.getElementById("growthScrollHint").hidden = width <= viewportWidth;
+    document.getElementById("growthRangeMeta").textContent = months.length ? `${months[0]} — ${months.at(-1)}` : "";
+    // Reset or restore synchronously so a pending resize cannot overwrite a user's next scroll.
+    const scrollLeft = width > viewportWidth ? (scrollKey === growthScrollKey ? scrollRatio : 1) * (width - viewportWidth) : 0;
+    totalScroller.scrollLeft = cpScroller.scrollLeft = scrollLeft;
+    growthScrollKey = scrollKey;
+    ["growthTotalAxis", "growthCpAxis"].forEach(id => document.getElementById(id).toggleAttribute("hidden", !valid.length));
+    totalSvg.attr("width", width).attr("height", 130).attr("viewBox", `0 0 ${width} 130`);
+    cpSvg.attr("width", width).attr("height", 260).attr("viewBox", `0 0 ${width} 260`);
     const legendBox = d3.select("#growthLegend").html("");
+    const trendMeta = document.getElementById("totalTrendMeta");
+    trendMeta.textContent = "";
+    trendMeta.removeAttribute("title");
 
     if (!months.length || !valid.length) {
         totalSvg.selectAll("*").remove();
         cpSvg.selectAll("*").remove();
         growthTotalG = null; growthCpG = null;
-        totalSvg.append("text").attr("fill", "var(--text-sub)").attr("y", 20).text("暂无匹配数据");
-        cpSvg.append("text").attr("fill", "var(--text-sub)").attr("y", 20).text("暂无匹配数据");
+        const emptyText = range === "all" ? "暂无匹配数据" : "此区间暂无作品，可切换全部历史";
+        totalSvg.append("text").attr("fill", "var(--text-sub)").attr("font-size", 11).attr("y", 20).text(emptyText);
+        cpSvg.append("text").attr("fill", "var(--text-sub)").attr("font-size", 11).attr("y", 20).text(emptyText);
         return;
     }
 
@@ -1299,24 +1344,16 @@ function drawGrowthChart(rows) {
         };
     });
 
-    const width = totalSvg.node().parentElement.clientWidth || 600;
-    const compactTimeAxis = width <= 520;
+    const compactTimeAxis = viewportWidth <= 520;
     const margin = { top: 15, right: 25, bottom: 25, left: compactTimeAxis ? 38 : 40 };
     const x = d3.scalePoint().domain(months).range([margin.left, width - margin.right]);
-    const timeTickTarget = compactTimeAxis ? 4 : (width <= 720 ? 6 : 8);
-    const trendTickStep = Math.max(1, Math.ceil(months.length / timeTickTarget));
-    let trendTicks = months.filter((_, i) => i % trendTickStep === 0 || i === months.length - 1);
-    if (compactTimeAxis) {
-        const years = Array.from(new Set(months.map(month => month.slice(0, 4))));
-        const yearStep = Math.max(1, Math.ceil(years.length / 4));
-        const shownYears = years.filter((_, i) => i % yearStep === 0 || i === years.length - 1);
-        trendTicks = shownYears.map(year => months.find(month => month.startsWith(year))).filter(Boolean);
-    }
-    const formatMonthTick = month => compactTimeAxis ? month.slice(0, 4) : month;
+    const tickCount = Math.min(months.length, Math.max(2, Math.floor((width - margin.left - margin.right) / 90) + 1));
+    const trendTicks = tickCount === 1 ? months : Array.from({ length: tickCount }, (_, i) => months[Math.round(i * (months.length - 1) / (tickCount - 1))]);
+    const tickAnchor = (_, i) => trendTicks.length === 1 ? "middle" : i === 0 ? "start" : i === trendTicks.length - 1 ? "end" : "middle";
 
     // 1. 上图：全站大盘面积趋势图（橙色渐变）
     const totalHeight = 130;
-    totalSvg.attr("width", width).attr("height", totalHeight);
+    totalSvg.attr("width", width).attr("height", totalHeight).attr("viewBox", `0 0 ${width} ${totalHeight}`);
     const yTotalMax = d3.max(totalData, d => d.count) || 1;
     const yTotal = d3.scaleLinear().domain([0, yTotalMax]).nice().range([totalHeight - margin.bottom, margin.top]);
 
@@ -1328,16 +1365,18 @@ function drawGrowthChart(rows) {
         areaGradient.append("stop").attr("offset", "100%").attr("stop-color", "#b86f7d").attr("stop-opacity", 0.015);
 
         growthTotalG = totalSvg.append("g");
-        growthTotalG.append("g").attr("class", "axis y-axis");
         growthTotalG.append("g").attr("class", "axis x-axis");
         growthTotalG.append("path").attr("class", "total-area").attr("fill", "url(#totalTrendGradient)");
         growthTotalG.append("path").attr("class", "total-line").attr("fill", "none").attr("stroke", "#b86f7d").attr("stroke-width", 2);
         growthTotalG.append("g").attr("class", "total-dots-layer");
     }
 
-    growthTotalG.select(".y-axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(yTotal).ticks(3).tickFormat(compactTimeAxis ? formatAxisCompact : formatNumber));
+    d3.select("#growthTotalAxis").attr("width", margin.left).attr("height", totalHeight)
+        .selectAll("g.trend-axis-root").data([null]).join("g").attr("class", "axis trend-axis-root").attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(yTotal).tickValues(yTotal.ticks(3).filter(Number.isInteger)).tickFormat(compactTimeAxis ? formatAxisCompact : formatNumber));
     growthTotalG.select(".x-axis").attr("transform", `translate(0,${totalHeight - margin.bottom})`)
-        .call(d3.axisBottom(x).tickValues(trendTicks).tickFormat(formatMonthTick));
+        .call(d3.axisBottom(x).tickValues(trendTicks))
+        .selectAll("text").attr("text-anchor", tickAnchor);
 
     const area = d3.area().x(d => x(d.month)).y0(totalHeight - margin.bottom).y1(d => yTotal(d.count)).curve(d3.curveMonotoneX);
     const lineTotal = d3.line().x(d => x(d.month)).y(d => yTotal(d.count)).curve(d3.curveMonotoneX);
@@ -1357,18 +1396,21 @@ function drawGrowthChart(rows) {
         exit => exit.remove()
     );
 
-    const cutoffText = window.DASHBOARD_META?.data_cutoff || "";
     const cutoffDate = cutoffText.match(/^(\d{4})-(\d{2})-(\d{2})/);
     const lastMonth = months[months.length - 1];
     const lastMonthIncomplete = Boolean(cutoffDate && `${cutoffDate[1]}-${cutoffDate[2]}` === lastMonth && +cutoffDate[3] < new Date(+cutoffDate[1], +cutoffDate[2], 0).getDate());
     const peakData = lastMonthIncomplete ? totalData.slice(0, -1) : totalData;
     const peakValue = d3.max(peakData, d => d.count) || 0;
     const peakMonths = peakData.filter(d => d.count === peakValue).map(d => d.month);
-    document.getElementById("totalTrendMeta").innerText = `单月新增峰值：${peakMonths.join("、")} · ${peakValue} 篇`;
+    trendMeta.textContent = peakData.length ? `单月峰值 ${formatNumber(peakValue)} 篇 · ${peakMonths[0]}${peakMonths.length > 1 ? ` 等 ${peakMonths.length} 个月` : ""}` : "本月数据尚未完整";
+    if (peakData.length) trendMeta.title = `单月峰值：${peakMonths.join("、")} · ${formatNumber(peakValue)} 篇`;
     const completeTotalData = lastMonthIncomplete ? totalData.slice(0, -1) : totalData;
     const partialTotalData = lastMonthIncomplete ? totalData.slice(-2) : [];
     growthTotalG.select(".total-area").datum(completeTotalData).attr("d", area);
     growthTotalG.select(".total-line").datum(completeTotalData).attr("d", lineTotal);
+    growthTotalG.selectAll("circle.total-single-point").data(completeTotalData.length === 1 ? completeTotalData : []).join("circle")
+        .attr("class", "total-single-point").attr("cx", d => x(d.month)).attr("cy", d => yTotal(d.count)).attr("r", 3)
+        .attr("fill", "#b86f7d").attr("pointer-events", "none");
     const bandStart = lastMonthIncomplete ? (months.length > 1 ? (x(months[months.length - 2]) + x(lastMonth)) / 2 : margin.left) : 0;
     growthTotalG.selectAll("rect.current-month-band").data(lastMonthIncomplete ? [lastMonth] : []).join("rect")
         .attr("class", "current-month-band").attr("x", bandStart).attr("y", margin.top)
@@ -1381,19 +1423,18 @@ function drawGrowthChart(rows) {
         .attr("class", "total-partial-point").attr("cx", d => x(d.month)).attr("cy", d => yTotal(d.count)).attr("r", 3.5)
         .attr("fill", "var(--bg-card)").attr("stroke", "#b86f7d").attr("stroke-width", 2);
     growthTotalG.selectAll("text.current-month-note").data(lastMonthIncomplete ? [cutoffDate[3]] : []).join("text")
-        .attr("class", "current-month-note").attr("x", width - margin.right).attr("y", margin.top + 9).attr("text-anchor", "end")
+        .attr("class", "current-month-note").attr("x", width - margin.right).attr("y", 10).attr("text-anchor", "end")
         .attr("fill", "var(--text-sub)").attr("font-size", 9).text(day => `截至 ${+cutoffDate[2]}/${+day}`);
 
     // 2. 下图：各 CP 趋势折线图
     const cpHeight = 260;
-    cpSvg.attr("width", width).attr("height", cpHeight);
+    cpSvg.attr("width", width).attr("height", cpHeight).attr("viewBox", `0 0 ${width} ${cpHeight}`);
     const yCpMax = d3.max(cpSeries, s => d3.max(s.points, p => p.count)) || 1;
     const yCp = d3.scaleLinear().domain([0, yCpMax]).nice().range([cpHeight - margin.bottom, margin.top]);
 
     if (!growthCpG) {
         cpSvg.selectAll("*").remove();
         growthCpG = cpSvg.append("g");
-        growthCpG.append("g").attr("class", "axis y-axis");
         growthCpG.append("g").attr("class", "axis x-axis");
         growthCpG.append("g").attr("class", "series-layer");
     }
@@ -1403,10 +1444,12 @@ function drawGrowthChart(rows) {
         .attr("width", Math.max(0, width - margin.right - bandStart)).attr("height", cpHeight - margin.top - margin.bottom)
         .attr("rx", 3).attr("fill", "#f3bd75").attr("fill-opacity", .13).lower();
 
-    growthCpG.select(".y-axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(yCp).ticks(5).tickFormat(compactTimeAxis ? formatAxisCompact : formatNumber));
+    d3.select("#growthCpAxis").attr("width", margin.left).attr("height", cpHeight)
+        .selectAll("g.trend-axis-root").data([null]).join("g").attr("class", "axis trend-axis-root").attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(yCp).tickValues(yCp.ticks(5).filter(Number.isInteger)).tickFormat(compactTimeAxis ? formatAxisCompact : formatNumber));
     growthCpG.select(".x-axis").attr("transform", `translate(0,${cpHeight - margin.bottom})`)
-        .call(d3.axisBottom(x).tickValues(trendTicks).tickFormat(formatMonthTick))
-        .selectAll("text").attr("transform", "rotate(0)").style("text-anchor", "middle");
+        .call(d3.axisBottom(x).tickValues(trendTicks))
+        .selectAll("text").attr("text-anchor", tickAnchor);
 
     const lineCp = d3.line().x(d => x(d.month)).y(d => yCp(d.count)).curve(d3.curveMonotoneX);
 
@@ -1420,12 +1463,16 @@ function drawGrowthChart(rows) {
     // 透明的粗「命中区」：专门用来接收 hover/click，比细线更容易悬浮到
     seriesEnter.append("path").attr("class", "series-hit").attr("fill", "none").attr("stroke", "transparent").attr("stroke-width", 20).style("cursor", "pointer");
     seriesEnter.append("g").attr("class", "series-dots");
+    seriesEnter.append("circle").attr("class", "series-single-point").attr("r", 3).attr("pointer-events", "none");
     const seriesMerged = seriesEnter.merge(seriesSel);
 
     seriesMerged.each(function(s) {
         const sGroup = d3.select(this);
         const completePoints = lastMonthIncomplete ? s.points.slice(0, -1) : s.points;
         const partialPoints = lastMonthIncomplete ? s.points.slice(-2) : [];
+        sGroup.select(".series-single-point").attr("display", completePoints.length === 1 ? null : "none").attr("fill", cpColor(s.cp))
+            .attr("cx", completePoints.length === 1 ? x(completePoints[0].month) : 0)
+            .attr("cy", completePoints.length === 1 ? yCp(completePoints[0].count) : 0);
         sGroup.select(".series-line")
             .attr("stroke", cpColor(s.cp))
             .attr("d", lineCp(completePoints));
@@ -1453,15 +1500,14 @@ function drawGrowthChart(rows) {
             exit => exit.remove()
         );
 
-        const shortName = s.cp.length > 10 ? s.cp.slice(0, 9) + '…' : s.cp;
         const totalCount = d3.sum(s.points, point => point.count);
-        legendBox.append("div")
+        legendBox.append("button").attr("type", "button")
             .attr("class", "growth-legend-row")
             .attr("data-cp", s.cp)
             .on("click", event => activateLegend(event, "growth", s.cp, setGrowthHighlight, `<b>${s.cp}</b><br>当前时间范围新增：<b>${totalCount.toLocaleString()}</b> 篇`))
-            .on("mouseenter", () => setGrowthHighlight(s.cp))
-            .on("mouseleave", () => setGrowthHighlight(null))
-            .html(`<span class="growth-legend-swatch" style="background:${cpColor(s.cp)};"></span><span>${shortName}</span>`);
+            .on("mouseenter focus", () => setGrowthHighlight(s.cp))
+            .on("mouseleave blur", () => setGrowthHighlight(null))
+            .html(`<span class="growth-legend-swatch" style="background:${cpColor(s.cp)};"></span><span>${s.cp}</span>`);
     });
 }
 
@@ -1482,6 +1528,12 @@ function setGrowthHighlight(cp) {
 
 // 🚀 性能优化 4：持久化 <g> 容器 + key-joined bars/labels，筛选切换时只对变化的 CP 做增删/移动动画，
 // 而不是每次都清空重画所有条形。
+function cpProfileXTicks(scale, compact) {
+    const ticks = scale.ticks(5).filter(Number.isInteger);
+    // 平方根轴右侧更密，手机减少刻度；作品数始终使用整数。
+    return compact && ticks.length > 4 ? ticks.filter((_, i) => i === 0 || i % 2 === 1) : ticks;
+}
+
 function drawCpBar(rows) {
     const topNRaw = document.getElementById("cpBarTopNSelect").value;
     const fullData = Array.from(d3.group(rows, d => d.cp), ([cp, items]) => ({
@@ -1494,10 +1546,10 @@ function drawCpBar(rows) {
     if (topNRaw !== "all" && fullData.length > +topNRaw) data = fullData.slice(0, +topNRaw);
 
     const svg = d3.select("#cpBarChart");
-    const width = Math.max(svg.node().parentElement.clientWidth - 8, 320);
+    const width = svg.node().parentElement.clientWidth;
     const compactChart = width <= 520;
     const height = compactChart ? 310 : 330;
-    svg.attr("width", width).attr("height", height);
+    svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
     svg.selectAll("*").remove();
     cpBarG = null;
 
@@ -1513,8 +1565,12 @@ function drawCpBar(rows) {
     const y = d3.scaleLinear().domain([0, yMax * 1.08]).nice().range([height - margin.bottom, margin.top]);
     const radius = d3.scaleSqrt().domain([0, d3.max(data, d => d.highCount) || 1]).range([6, 22]);
     const g = svg.append("g");
-    g.append("g").attr("class", "axis").attr("transform", `translate(0,${height-margin.bottom})`).call(d3.axisBottom(x).ticks(5).tickFormat(formatNumber));
-    g.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(compactChart ? formatAxisCompact : formatNumber));
+    const xTicks = cpProfileXTicks(x, compactChart);
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${height-margin.bottom})`)
+        .call(d3.axisBottom(x).tickValues(xTicks).tickFormat(formatAxisCompact))
+        .selectAll("text").attr("text-anchor", (d, i) => i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle");
+    g.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(compactChart ? 3 : 4).tickFormat(formatAxisCompact));
 
     const points = g.selectAll("g.cp-point").data(data, d => d.cp).join("g")
         .attr("class", "cp-point").attr("transform", d => `translate(${x(d.count)},${y(d.p90)})`)
@@ -1524,7 +1580,7 @@ function drawCpBar(rows) {
         .on("mouseenter", (e, d) => setProfileHighlight(d.cp))
         .on("mouseleave", () => { hideTooltip(); setProfileHighlight(null); }).on("click", (e, d) => activateChartCp(e, d.cp, setProfileHighlight, profileTooltip(d)))
         .on("keydown", (e, d) => { if (e.key === "Enter" || e.key === " ") setFocusCP(d.cp); });
-    points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("stroke", "#fff").attr("stroke-width", 1.5);
+    points.append("circle").attr("r", d => radius(d.highCount)).attr("fill", d => cpColor(d.cp)).attr("stroke", "#b9aab1").attr("stroke-opacity", .6).attr("stroke-width", .65);
     const legend = d3.select("#cpProfileLegend").html("").attr("class", "chart-legend");
     data.forEach(d => {
         const item = legend.append("button").attr("type", "button").attr("class", "chart-legend-button").attr("data-cp", d.cp)
@@ -1549,10 +1605,11 @@ function setProfileHighlight(cp) {
 
 function drawLikesChart(rows) {
     const svg = d3.select("#likesChart");
+    const width = svg.node().parentElement.clientWidth;
     if (!rows.length) {
         svg.selectAll("*").remove();
         likesG = null;
-        svg.attr("width", 300).attr("height", 60).append("text").attr("fill", "var(--text-sub)").attr("y", 20).text("暂无数据");
+        svg.attr("width", width).attr("height", 60).attr("viewBox", `0 0 ${width} 60`).append("text").attr("fill", "var(--text-sub)").attr("y", 20).text("暂无数据");
         d3.select("#likesLegend").html(""); return;
     }
     const topNRaw = document.getElementById("likesTopNSelect").value;
@@ -1578,10 +1635,9 @@ function drawLikesChart(rows) {
         return row;
     });
     const series = d3.stack().keys(stackKeys)(normalizedData);
-    const width = svg.node().parentElement.clientWidth || 400;
-    const margin = { top: 8, right: 12, bottom: 30, left: width <= 520 ? 58 : 70 };
+    const margin = { top: 8, right: 20, bottom: 30, left: width <= 520 ? 58 : 70 };
     const height = 320;
-    svg.attr("width", width).attr("height", height);
+    svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
     const x = d3.scaleLinear().domain([0, 100]).range([margin.left, width - margin.right]);
     const y = d3.scaleBand().domain(TIER_ORDER).range([margin.top, height - margin.bottom]).padding(.2);
     const colorOf = key => key === othersKey ? "#d9cfd2" : cpColor(key);
@@ -1589,7 +1645,8 @@ function drawLikesChart(rows) {
     svg.selectAll("*").remove();
     likesG = svg.append("g");
     const g = likesG;
-    g.append("g").attr("class", "axis").attr("transform", `translate(0,${height-margin.bottom})`).call(d3.axisBottom(x).ticks(4).tickFormat(d => d + "%"));
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${height-margin.bottom})`).call(d3.axisBottom(x).ticks(4).tickFormat(d => d + "%"))
+        .selectAll("text").attr("text-anchor", d => d === 0 ? "start" : d === 100 ? "end" : "middle");
     g.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y));
 
     g.selectAll(".series").data(series).join("g")
@@ -1647,6 +1704,7 @@ function renderHeatmapCpChecks() {
 
 function drawHeatmap(rows) {
     const metric = document.getElementById("metricSelect").value;
+    const metricLabels = { count: "发文篇数", likes: "点赞总量", view_count: "阅读总量", chapter_count: "章节总量" };
     const rangeRaw = document.getElementById("heatmapRangeSelect").value;
     const sortMode = document.getElementById("heatmapSortSelect").value;
     const topNRaw = document.getElementById("heatmapTopNSelect").value;
@@ -1708,7 +1766,7 @@ function drawHeatmap(rows) {
 
     const wrapper = container.append("div").attr("class", "heatmap-wrapper");
     const fixedBox = wrapper.append("div").attr("class", "heatmap-fixed-labels");
-    const leftSvg = fixedBox.append("svg").attr("width", 118).attr("height", gridH + headerH + footerH);
+    const leftSvg = fixedBox.append("svg").attr("width", fixedBox.node().clientWidth).attr("height", gridH + headerH + footerH);
     const leftG = leftSvg.append("g").attr("transform", `translate(0, ${headerH})`);
 
     sortedCps.forEach((cp, i) => {
@@ -1736,12 +1794,13 @@ function drawHeatmap(rows) {
                 .attr("x", xPos + 1).attr("y", yPos + 2).attr("width", cellW - 2).attr("height", cellH - 4)
                 .attr("rx", 3).attr("fill", val === 0 ? "#f8fafc" : color(val))
                 .style("cursor", val ? "pointer" : "default")
-                .attr("aria-label", `${cp}，${m}，${metric}：${val}`);
+                .attr("aria-label", `${cp}，${m}，${metricLabels[metric]}：${val}`);
 
             if (val) {
-                cell.on("mousemove", (e) => showTooltip(`<b>${cp}</b> · ${m}<br>发文: ${o.count}篇 · 点赞: ${formatNumber(o.likes)}`, e))
+                const cellTooltip = `<b>${cp}</b> · ${m}<br>${metricLabels[metric]}：${formatNumber(val)}${metric === "count" ? " 篇" : `<br>发文：${o.count} 篇`}`;
+                cell.on("mousemove", (e) => showTooltip(cellTooltip, e))
                     .on("mouseleave", hideTooltip)
-                    .on("click", event => activateChartCp(event, cp, null, `<b>${cp}</b> · ${m}<br>发文: ${o.count}篇 · 点赞: ${formatNumber(o.likes)}`));
+                    .on("click", event => activateChartCp(event, cp, null, cellTooltip));
             }
         });
     });
@@ -1752,7 +1811,6 @@ function drawHeatmap(rows) {
         monthG.append("text").attr("x", xPos).attr("y", 14).attr("text-anchor", "start").attr("fill", "var(--text-muted)").attr("font-size", "9.5px").attr("transform", `rotate(40, ${xPos}, 14)`).text(m);
     });
 
-    const metricLabels = { count: "发文篇数", likes: "点赞总量", view_count: "阅读总量", chapter_count: "章节总量" };
     const legend = d3.select("#heatmapLegend").html("")
         .style("display", "flex").style("align-items", "center").style("gap", "10px").style("font-size", "11.5px").style("color", "var(--text-muted)");
     legend.append("span").text(metricLabels[metric]);
