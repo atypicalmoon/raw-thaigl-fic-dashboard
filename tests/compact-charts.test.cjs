@@ -82,7 +82,7 @@ test('未完整月份仅末段虚线，完整月份没有未完整提示', () =>
     assert.equal((partial.svg.innerHTML.match(/class="month-line partial-line"/g) || []).length, 1);
     assert.equal((partial.svg.innerHTML.match(/class="month-point partial-point"/g) || []).length, 1);
     assert.match(partial.main.innerHTML, /8 月未完整（虚线）/);
-    assert.match(partial.main.innerHTML, /截至 8\/29 共 1,628 篇/);
+    assert.match(partial.main.innerHTML, new RegExp(`截至 8\\/29 共 ${reports.LingOrm.currentYear.toLocaleString('zh-CN')} 篇`));
     const complete = renderReport({ ...reports.LingOrm, end: '2026-08-31' });
     assert.doesNotMatch(complete.svg.innerHTML, /partial-line|partial-point/);
     assert.doesNotMatch(complete.main.innerHTML, /未完整/);
@@ -122,4 +122,12 @@ test('紧凑外观约束：手机小字、固定比例、短轴说明和淡色�
     assert.match(html, /\.month-label\{font-size:8\.5px\}/);
     assert.match(read('index.html'), /横轴：作品数 · 纵轴：点赞前 10% 门槛/);
     assert.match(dashboardSource, /\.attr\("stroke", "#b9aab1"\)\.attr\("stroke-opacity", \.6\)\.attr\("stroke-width", \.65\)/);
+});
+
+test('半年报告表格横向滚动时固定 CP 首列', () => {
+    const css = read('reports/report.css');
+    assert.match(css, /thead th:first-child\{left:0;z-index:4/);
+    assert.match(css, /tbody th:first-child\{position:sticky;left:0;z-index:2/);
+    assert.match(read('reports/report.html'), /report\.css\?v=[a-f0-9]{12}/);
+    assert.match(read('reports/index.html'), /report\.css\?v=[a-f0-9]{12}/);
 });

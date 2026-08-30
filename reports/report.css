@@ -193,6 +193,9 @@ table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
 th,td{padding:11px 13px;border-bottom:1px solid #f1dfde;text-align:right;font-variant-numeric:tabular-nums}
 thead th{position:sticky;top:0;background:#fff5f6;color:var(--muted);font-size:10px}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+thead th:first-child{left:0;z-index:4;box-shadow:4px 0 8px -7px rgba(91,40,61,.34)}
+tbody th:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:4px 0 8px -7px rgba(91,40,61,.34)}
+tbody tr:hover th:first-child{background:#fffafa}
 tbody th a{color:var(--wine);font-size:11px;text-decoration:none}
 tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
 tbody tr:hover{background:#fffafa}
