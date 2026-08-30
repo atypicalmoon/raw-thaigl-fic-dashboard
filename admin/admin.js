@@ -169,7 +169,10 @@ function filteredItems() {
       const cps = String(item.current_cp || "").split("|").concat(String(item.candidate_cps || "").split("|"));
       if (!cps.map((value) => value.trim()).includes(state.filters.cp)) return false;
     }
-    if (state.filters.date && !String(item.publish_date || "").startsWith(state.filters.date)) return false;
+    if (state.filters.date) {
+      const publishDate = String(item.publish_date || "");
+      if (state.filters.date === "未注明" ? /^\d{4}-\d{2}/.test(publishDate) : !publishDate.startsWith(state.filters.date)) return false;
+    }
     return true;
   });
 }
@@ -185,7 +188,10 @@ function setSelectOptions(select, values, firstLabel) {
 
 function refreshFilterOptions() {
   const cps = [...new Set(state.items.flatMap((item) => String(item.current_cp || "").split("|").concat(String(item.candidate_cps || "").split("|")).map((value) => value.trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b));
-  const dates = [...new Set(state.items.map((item) => String(item.publish_date || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  const dates = [...new Set(state.items.map((item) => {
+    const value = String(item.publish_date || "");
+    return value ? (/^\d{4}-\d{2}/.test(value) ? value.slice(0, 7) : "未注明") : "";
+  }).filter(Boolean))].sort((a, b) => b.localeCompare(a, "zh-CN"));
   setSelectOptions($("#cpFilter"), cps, "全部 CP");
   setSelectOptions($("#dateFilter"), dates, "全部时间");
 }
