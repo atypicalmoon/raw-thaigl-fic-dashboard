@@ -176,7 +176,9 @@ function filteredItems() {
 
 function setSelectOptions(select, values, firstLabel) {
   const current = select.value;
-  select.replaceChildren(make("option", "", firstLabel));
+  const first = make("option", "", firstLabel);
+  first.value = "";
+  select.replaceChildren(first);
   values.forEach((value) => select.append(make("option", "", value)));
   select.value = values.includes(current) ? current : "";
 }
