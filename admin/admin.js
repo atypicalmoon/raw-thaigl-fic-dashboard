@@ -66,17 +66,19 @@ function evidence(label, value) {
 }
 
 function renderCard(item) {
-  const card = make("article", "review-card");
+  const card = make("article", "review-card" + (item.kind === "risk" ? " informational" : ""));
   card.dataset.itemId = item.id;
-  const check = document.createElement("input");
-  check.type = "checkbox";
-  check.checked = state.selected.has(item.id);
-  check.setAttribute("aria-label", "选择 " + (item.title || item.link));
-  check.addEventListener("change", () => {
-    if (check.checked) state.selected.add(item.id); else state.selected.delete(item.id);
-    updateSelectionBar();
-  });
-  card.append(check);
+  if (item.kind !== "risk") {
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.checked = state.selected.has(item.id);
+    check.setAttribute("aria-label", "选择 " + (item.title || item.link));
+    check.addEventListener("change", () => {
+      if (check.checked) state.selected.add(item.id); else state.selected.delete(item.id);
+      updateSelectionBar();
+    });
+    card.append(check);
+  }
 
   const main = make("div", "review-main");
   const meta = make("div", "review-meta");
@@ -105,47 +107,48 @@ function renderCard(item) {
   );
   main.append(evidenceGrid);
 
-  const decisionRow = make("div", "decision-row");
-  const buttons = make("div", "decision-buttons");
-  const currentAction = item.action || "";
-  const actions = item.kind === "risk" ? ["defer"] : ["keep", "change", "exclude", "defer"];
-  actions.forEach((action) => {
-    const button = make("button", "decision-button" + (currentAction === action ? " active" : ""), actionLabels[action]);
-    button.type = "button";
-    button.addEventListener("click", () => {
-      item.action = action;
-      if (action !== "change") item.new_cp = "";
-      renderCurrentCard(item);
-      saveDraft(item);
+  if (item.kind !== "risk") {
+    const decisionRow = make("div", "decision-row");
+    const buttons = make("div", "decision-buttons");
+    const currentAction = item.action || "";
+    ["keep", "change", "exclude", "defer"].forEach((action) => {
+      const button = make("button", "decision-button" + (currentAction === action ? " active" : ""), actionLabels[action]);
+      button.type = "button";
+      button.addEventListener("click", () => {
+        item.action = action;
+        if (action !== "change") item.new_cp = "";
+        renderCurrentCard(item);
+        saveDraft(item);
+      });
+      buttons.append(button);
     });
-    buttons.append(button);
-  });
-  decisionRow.append(buttons);
+    decisionRow.append(buttons);
 
-  const select = document.createElement("select");
-  select.className = "decision-select";
-  select.setAttribute("aria-label", "选择新的 CP");
-  select.disabled = currentAction !== "change";
-  const placeholder = make("option", "", currentAction === "change" ? "选择 CP" : "修改 CP 时选择");
-  placeholder.value = "";
-  select.append(placeholder);
-  String(item.candidate_cps || "").split("|").map((value) => value.trim()).filter(Boolean).forEach((cp) => {
-    const option = make("option", "", cp);
-    option.value = cp;
-    option.selected = item.new_cp === cp;
-    select.append(option);
-  });
-  select.addEventListener("change", () => { item.new_cp = select.value; saveDraft(item); });
-  decisionRow.append(select);
+    const select = document.createElement("select");
+    select.className = "decision-select";
+    select.setAttribute("aria-label", "选择新的 CP");
+    select.disabled = currentAction !== "change";
+    const placeholder = make("option", "", currentAction === "change" ? "选择 CP" : "修改 CP 时选择");
+    placeholder.value = "";
+    select.append(placeholder);
+    String(item.candidate_cps || "").split("|").map((value) => value.trim()).filter(Boolean).forEach((cp) => {
+      const option = make("option", "", cp);
+      option.value = cp;
+      option.selected = item.new_cp === cp;
+      select.append(option);
+    });
+    select.addEventListener("change", () => { item.new_cp = select.value; saveDraft(item); });
+    decisionRow.append(select);
 
-  const note = document.createElement("textarea");
-  note.className = "review-note";
-  note.rows = 1;
-  note.placeholder = "备注（可选）";
-  note.value = item.note || "";
-  note.addEventListener("input", () => { item.note = note.value; scheduleDraft(item); });
-  decisionRow.append(note);
-  main.append(decisionRow);
+    const note = document.createElement("textarea");
+    note.className = "review-note";
+    note.rows = 1;
+    note.placeholder = "备注（可选）";
+    note.value = item.note || "";
+    note.addEventListener("input", () => { item.note = note.value; scheduleDraft(item); });
+    decisionRow.append(note);
+    main.append(decisionRow);
+  }
   card.append(main);
   return card;
 }
@@ -224,7 +227,8 @@ function setActiveKind(kind) {
   state.currentKind = kind;
   document.querySelectorAll("[data-kind]").forEach((node) => node.classList.toggle("active", node.dataset.kind === kind));
   const isHistory = kind === "history";
-  $("#selectionBar").hidden = isHistory;
+  if (isHistory || kind === "risk") state.selected.clear();
+  $("#selectionBar").hidden = isHistory || kind === "risk";
   $("#reviewList").hidden = isHistory;
   $("#historyList").hidden = !isHistory;
   if (isHistory) loadHistory(); else renderItems();
