@@ -36,15 +36,13 @@ a{color:inherit}
 .period-switch select,.table-tools select,.table-tools input{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
 .period-switch select{padding:8px 30px 8px 10px;font-size:11px}
 
-.report-hero{display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:34px;padding:62px 7% 0;border:1px solid var(--line);border-radius:26px;background:radial-gradient(circle at 90% 3%,rgba(181,75,92,.13),transparent 31%),linear-gradient(145deg,#fff,#fff8f6);box-shadow:var(--shadow);overflow:hidden}
+.report-hero{display:grid;grid-template-columns:1fr;gap:0;padding:62px 7% 0;border:1px solid var(--line);border-radius:26px;background:radial-gradient(circle at 90% 3%,rgba(181,75,92,.13),transparent 31%),linear-gradient(145deg,#fff,#fff8f6);box-shadow:var(--shadow);overflow:hidden}
 .hero-copy{max-width:760px}
 .eyebrow,.section-label{margin:0;color:var(--wine);font-size:11px;font-weight:800;letter-spacing:.12em}
+.eyebrow{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px}
+.hero-meta{color:var(--quiet);font-size:10px;font-weight:500;letter-spacing:0;white-space:nowrap}
 .hero-copy h1,.index-hero h1{margin:10px 0 18px;font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:clamp(42px,6vw,60px);font-weight:600;line-height:1.14;letter-spacing:-.03em}
 .hero-copy h1 span{color:var(--wine);font-weight:500}
-.hero-copy>p:last-child{max-width:700px;margin:0;color:var(--muted);font-size:15px;line-height:1.75}
-.hero-period{align-self:start;padding:18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,250,248,.82)}
-.hero-period span,.hero-period small{display:block;color:var(--quiet);font-size:11px}
-.hero-period b{display:block;margin:7px 0;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.55}
 .overview-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);margin-top:34px;border-top:1px solid var(--line)}
 .overview-grid article{padding:23px 20px 27px;border-right:1px solid var(--line)}
 .overview-grid article:last-child{border-right:0}
@@ -253,12 +251,9 @@ tbody tr:hover{background:#fffafa}
   .report-nav a{padding:6px 7px;font-size:9px}
   .period-switch{padding-bottom:10px;font-size:10px}
   .period-switch select{flex:1;min-width:0}
-  .report-hero{grid-template-columns:1fr;gap:17px;padding:42px 20px 0;border-radius:20px}
+  .report-hero{padding:42px 20px 0;border-radius:20px}
   .hero-copy h1{font-size:38px;line-height:1.13}
-  .hero-copy>p:last-child{font-size:13px}
-  .hero-period{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:3px 9px;padding:12px 14px}
-  .hero-period b{margin:0;font-size:12px;line-height:1.4}
-  .hero-period small{grid-column:2;text-align:left}
+  .hero-meta{white-space:normal}
   .overview-grid{grid-template-columns:1fr 1fr;margin-top:8px}
   .overview-grid article{padding:17px 13px 19px;border-bottom:1px solid var(--line)}
   .overview-grid article:nth-child(2){border-right:0}

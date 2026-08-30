@@ -101,8 +101,7 @@
 
     app.innerHTML=`
       <section class="report-hero">
-        <div class="hero-copy"><p class="eyebrow">${esc(report.period.label)}</p><h1>泰百同人<br><span>创作报告</span></h1><p>${esc(report.summary[0])}</p></div>
-        <div class="hero-period"><span>统计区间</span><b>${esc(report.period.start)} - ${esc(report.period.cutoff)}</b><small>数据最新至 ${esc(report.period.source_latest)}</small></div>
+        <div class="hero-copy"><p class="eyebrow"><span>${esc(report.period.label)}</span><small class="hero-meta">${esc(report.period.start)} — ${esc(report.period.cutoff)} · 更新至 ${esc(report.period.source_latest)}</small></p><h1>泰百同人<br><span>创作报告</span></h1></div>
         <div class="overview-grid"><article><b>${fmt(report.overview.period_works)}</b><span>本期新作</span><small>${changeText(report.overview.works_change_pct)}</small></article><article><b>${fmt(report.overview.authors)}</b><span>活跃作者</span><small>${changeText(report.overview.authors_change_pct)}</small></article><article><b>${fmt(report.overview.active_cps)}</b><span>有新作的 CP</span><small>共收录 ${fmt(report.overview.catalog_cps)} 个 CP</small></article><article><b>${fmt(report.overview.corpus_works)}</b><span>期末累计作品</span><small>含报告期之前发布的作品</small></article></div>
       </section>
 
