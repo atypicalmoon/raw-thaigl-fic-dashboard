@@ -37,3 +37,10 @@
 
 /reports/report-index.js
   Cache-Control: public, max-age=31556952, immutable
+
+/admin/*
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow
+
+/api/admin/*
+  Cache-Control: private, no-store
