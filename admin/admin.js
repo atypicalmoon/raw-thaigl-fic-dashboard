@@ -3,6 +3,7 @@ const state = {
   items: [],
   counts: { required: 0, candidate: 0, risk: 0 },
   search: "",
+  filters: { state: "", cp: "", date: "" },
   selected: new Set(),
   history: [],
   saving: new Map(),
@@ -12,6 +13,7 @@ const $ = (selector) => document.querySelector(selector);
 const escText = (value) => String(value ?? "");
 const kindLabels = { required: "待确认", candidate: "抽查候选", risk: "风险提示" };
 const actionLabels = { keep: "保留", change: "修改 CP", exclude: "排除", defer: "稍后处理" };
+const displayReason = (item) => String(item.trigger_reason || item.source_status || "来源规则待说明").includes("CP") ? "CP 冲突" : (item.trigger_reason || item.source_status || "来源规则待说明");
 
 function setMessage(message, tone = "") {
   const target = $("#globalMessage");
@@ -81,7 +83,7 @@ function renderCard(item) {
   meta.append(make("span", "kind-badge " + item.kind, kindLabels[item.kind] || "记录"));
   if (item.state === "confirmed") meta.append(make("span", "state-badge", "已确认"));
   if (item.state === "published") meta.append(make("span", "state-badge published", "已提交发布"));
-  meta.append(make("span", "", item.trigger_reason || item.source_status || "来源规则待说明"));
+  meta.append(make("span", "", displayReason(item)));
   main.append(meta);
 
   const title = make("h2", "review-title");
@@ -92,7 +94,7 @@ function renderCard(item) {
   link.textContent = item.title || "无标题";
   title.append(link);
   main.append(title);
-  main.append(make("p", "review-detail", item.kind === "risk" ? "这是提示项，不影响公开数据；有空再看即可。" : "原文链接已保留；只有需要时再打开。"));
+  if (item.kind === "risk") main.append(make("p", "review-detail", "仅提示，不影响公开数据。"));
 
   const evidenceGrid = make("div", "review-evidence");
   evidenceGrid.append(
@@ -158,7 +160,32 @@ function renderCurrentCard(item) {
 
 function filteredItems() {
   const needle = state.search.trim().toLowerCase();
-  return state.items.filter((item) => item.kind === state.currentKind && (!needle || [item.title, item.author, item.current_cp, item.candidate_cps, item.tag, item.trigger_reason].some((value) => String(value || "").toLowerCase().includes(needle))));
+  return state.items.filter((item) => {
+    if (item.kind !== state.currentKind) return false;
+    if (needle && ![item.title, item.author, item.current_cp, item.candidate_cps, item.tag, item.trigger_reason].some((value) => String(value || "").toLowerCase().includes(needle))) return false;
+    if (state.filters.state === "pending" && item.action) return false;
+    if (state.filters.state && state.filters.state !== "pending" && item.state !== state.filters.state) return false;
+    if (state.filters.cp) {
+      const cps = String(item.current_cp || "").split("|").concat(String(item.candidate_cps || "").split("|"));
+      if (!cps.map((value) => value.trim()).includes(state.filters.cp)) return false;
+    }
+    if (state.filters.date && !String(item.publish_date || "").startsWith(state.filters.date)) return false;
+    return true;
+  });
+}
+
+function setSelectOptions(select, values, firstLabel) {
+  const current = select.value;
+  select.replaceChildren(make("option", "", firstLabel));
+  values.forEach((value) => select.append(make("option", "", value)));
+  select.value = values.includes(current) ? current : "";
+}
+
+function refreshFilterOptions() {
+  const cps = [...new Set(state.items.flatMap((item) => String(item.current_cp || "").split("|").concat(String(item.candidate_cps || "").split("|")).map((value) => value.trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b));
+  const dates = [...new Set(state.items.map((item) => String(item.publish_date || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  setSelectOptions($("#cpFilter"), cps, "全部 CP");
+  setSelectOptions($("#dateFilter"), dates, "全部时间");
 }
 
 function renderItems() {
@@ -166,7 +193,8 @@ function renderItems() {
   list.replaceChildren();
   const items = filteredItems();
   if (!items.length) {
-    list.append(make("div", "empty", state.search ? "没有符合搜索条件的记录。" : "这里暂时没有需要处理的记录。"));
+    const hasFilters = state.search.trim() || Object.values(state.filters).some(Boolean);
+    list.append(make("div", "empty", hasFilters ? "没有符合条件的记录。" : "这里暂时没有需要处理的记录。"));
     updateSelectionBar();
     return;
   }
@@ -179,7 +207,7 @@ function updateSelectionBar() {
   const actionable = selected.filter((item) => item.action && item.action !== "defer");
   const confirmed = selected.filter((item) => item.state === "confirmed");
   const saving = selected.some((item) => state.saving.has(item.id));
-  $("#selectionSummary").textContent = selected.length ? "已选 " + selected.length + " 条 · 可确认 " + actionable.length + " 条 · 已确认 " + confirmed.length + " 条" : "尚未选择";
+  $("#selectionSummary").textContent = selected.length ? "已选 " + selected.length + " · 可确认 " + actionable.length + " · 已确认 " + confirmed.length : "尚未选择";
   $("#confirmButton").disabled = !actionable.length || saving;
   $("#publishButton").disabled = !confirmed.length || saving;
 }
@@ -198,6 +226,7 @@ async function loadQueue() {
   const data = await api("/api/admin/review/queue");
   state.items = data.items || [];
   state.counts = data.counts || state.counts;
+  refreshFilterOptions();
   ["required", "candidate", "risk"].forEach((kind) => setCount(kind, state.counts[kind]));
   renderItems();
 }
@@ -252,7 +281,7 @@ async function confirmSelected() {
   try {
     const result = await api("/api/admin/review/confirm", { method: "POST", body: JSON.stringify({ item_ids: ids }) });
     state.items.forEach((item) => { if (ids.includes(item.id)) item.state = "confirmed"; });
-    setMessage("已确认 " + result.confirmed + " 条，尚未发布。");
+    setMessage("已确认 " + result.confirmed + " 条");
     renderItems();
   } catch (error) { setMessage(error.message, "error"); }
 }
@@ -266,7 +295,7 @@ async function publishSelected() {
   if (!window.confirm(message)) return;
   try {
     const result = await api("/api/admin/review/publish", { method: "POST", body: JSON.stringify({ item_ids: items.map((item) => item.id) }) });
-    setMessage(result.workflow_started ? "已提交发布，云端正在重建看板。" : (result.warning || "已写入私有账本，但云端任务尚未启动。"), result.workflow_started ? "" : "error");
+    setMessage(result.workflow_started ? "已提交发布" : (result.warning || "已写入，但任务未启动"), result.workflow_started ? "" : "error");
     state.selected.clear();
     await loadQueue();
   } catch (error) { setMessage(error.message, "error"); }
@@ -298,6 +327,18 @@ $("#logoutButton").addEventListener("click", async () => {
 });
 $("#refreshButton").addEventListener("click", async () => { try { await loadQueue(); setMessage("列表已刷新"); } catch (error) { setMessage(error.message, "error"); } });
 $("#searchInput").addEventListener("input", (event) => { state.search = event.target.value; renderItems(); });
+$("#stateFilter").addEventListener("change", (event) => { state.filters.state = event.target.value; renderItems(); });
+$("#cpFilter").addEventListener("change", (event) => { state.filters.cp = event.target.value; renderItems(); });
+$("#dateFilter").addEventListener("change", (event) => { state.filters.date = event.target.value; renderItems(); });
+$("#clearFilters").addEventListener("click", () => {
+  state.search = "";
+  state.filters = { state: "", cp: "", date: "" };
+  $("#searchInput").value = "";
+  $("#stateFilter").value = "";
+  $("#cpFilter").value = "";
+  $("#dateFilter").value = "";
+  renderItems();
+});
 $("#confirmButton").addEventListener("click", confirmSelected);
 $("#publishButton").addEventListener("click", publishSelected);
 document.querySelectorAll("[data-kind]").forEach((node) => node.addEventListener("click", () => setActiveKind(node.dataset.kind)));

@@ -16,21 +16,21 @@
   <main class="admin-shell">
     <section class="intro">
       <p class="eyebrow">PRIVATE REVIEW DESK</p>
-      <h1>有空核对几条，确认多少发布多少。</h1>
-      <p>决定会自动保存到私人云端。暂缓的记录会继续留在队列里，不会影响已经确认的结果。</p>
+      <h1>核对几条，发布几条。</h1>
+      <p>选择会自动保存；确认后再发布。</p>
     </section>
 
     <section class="login-card" id="loginCard" hidden>
-      <div><span class="eyebrow">需要登录</span><h2>进入维护空间</h2><p id="loginHint">请使用 Cloudflare Access 登录；本地测试可使用管理密码。</p></div>
-      <form id="loginForm"><label for="loginPassword">管理密码</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="仅在启用密码登录时填写"><button class="primary" type="submit">登录</button><p class="form-message" id="loginMessage" role="status"></p></form>
+      <div><span class="eyebrow">需要登录</span><h2>进入维护空间</h2><p id="loginHint">输入管理密码。</p></div>
+      <form id="loginForm"><label for="loginPassword">管理密码</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="输入密码"><button class="primary" type="submit">登录</button><p class="form-message" id="loginMessage" role="status"></p></form>
     </section>
 
     <section id="app" hidden>
       <div class="summary-grid">
-        <button class="summary-card active" data-kind="required" type="button"><span>待确认</span><strong id="requiredCount">0</strong><small>无法自动判断的记录</small></button>
-        <button class="summary-card" data-kind="candidate" type="button"><span>抽查候选</span><strong id="candidateCount">0</strong><small>系统已选结果，可有空复核</small></button>
-        <button class="summary-card" data-kind="risk" type="button"><span>风险提示</span><strong id="riskCount">0</strong><small>标签或规则提醒</small></button>
-        <button class="summary-card" data-kind="history" type="button"><span>已处理</span><strong id="historyCount">—</strong><small>查看决定与操作记录</small></button>
+        <button class="summary-card active" data-kind="required" type="button"><span>待确认</span><strong id="requiredCount">0</strong><small>无法自动判断</small></button>
+        <button class="summary-card" data-kind="candidate" type="button"><span>抽查候选</span><strong id="candidateCount">0</strong><small>待抽查</small></button>
+        <button class="summary-card" data-kind="risk" type="button"><span>风险提示</span><strong id="riskCount">0</strong><small>规则提醒</small></button>
+        <button class="summary-card" data-kind="history" type="button"><span>已处理</span><strong id="historyCount">—</strong><small>历史记录</small></button>
       </div>
 
       <div class="toolbar">
@@ -40,7 +40,15 @@
           <button class="tab" data-kind="risk" type="button">风险提示</button>
           <button class="tab" data-kind="history" type="button">已处理</button>
         </div>
-        <div class="toolbar-row"><label class="search"><span>搜索</span><input id="searchInput" type="search" placeholder="标题、CP 或触发原因"></label><button class="secondary" id="refreshButton" type="button">刷新</button></div>
+        <div class="toolbar-row"><label class="search"><span>搜索</span><input id="searchInput" type="search" placeholder="标题 / CP / 标签"></label><button class="secondary" id="refreshButton" type="button">刷新</button></div>
+      </div>
+
+      <div class="filter-strip" aria-label="筛选条件">
+        <label><span>状态</span><select id="stateFilter"><option value="">全部</option><option value="pending">未选择</option><option value="draft">已保存</option><option value="confirmed">已确认</option></select></label>
+        <label><span>CP</span><select id="cpFilter"><option value="">全部 CP</option></select></label>
+        <label><span>时间</span><select id="dateFilter"><option value="">全部时间</option></select></label>
+        <button class="secondary" id="clearFilters" type="button">清除筛选</button>
+        <span class="flow-note">选择 → 保存　确认 → 发布</span>
       </div>
 
       <div class="selection-bar" id="selectionBar"><span id="selectionSummary">尚未选择</span><button class="secondary" id="confirmButton" type="button" disabled>确认选中</button><button class="primary" id="publishButton" type="button" disabled>发布已确认</button></div>
