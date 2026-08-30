@@ -96,7 +96,6 @@ function renderCard(item) {
   link.textContent = item.title || "无标题";
   title.append(link);
   main.append(title);
-  if (item.kind === "risk") main.append(make("p", "review-detail", "仅提示，不影响公开数据。"));
 
   const evidenceGrid = make("div", "review-evidence");
   evidenceGrid.append(
