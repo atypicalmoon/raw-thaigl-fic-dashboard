@@ -108,7 +108,6 @@ html[data-theme="white"] body{--bg-page:#fff;--bg-card:#fff;--bg-soft:#fafafa;--
 .daily-work-status{display:block;margin:-3px 0 7px;color:#a38a93;font-size:9px;letter-spacing:.04em}.daily-work-byline{margin-bottom:7px}
 .focus-identity{min-width:0}.focus-title-line{min-width:0;gap:9px}.focus-title-line h3{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.single-cp-report-link{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;padding:4px 7px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--accent);font-size:9px;font-weight:600;line-height:1.2;text-decoration:none;white-space:nowrap}.single-cp-report-link:hover{border-color:#d9b8c8;background:var(--accent-bg)}.single-cp-report-link[hidden]{display:none}@media(max-width:720px){.focus-identity{width:100%}.focus-title-line{align-items:center;flex-direction:row}.single-cp-report-link{padding:3px 6px;font-size:8px}}
 .daily-ticket-foot{border-top:0!important}
-.maintenance-entry{color:var(--text-sub);font-size:10px;text-decoration:none}.maintenance-entry:hover{color:var(--accent);text-decoration:underline}
 
 
 /* Prevent long legends and chart contents from defining the mobile card width. */
