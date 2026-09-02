@@ -1,1 +1,1 @@
-window.FULL_REPORT_CATALOG=[{"slug":"2026-H1","label":"2026 年上半年","start":"2026-01-01","end":"2026-06-30","cutoff":"2026-06-30","complete":true,"works":5304,"authors":3492,"active_cps":37,"version":"015f8dcea799"}];
+window.FULL_REPORT_CATALOG=[{"slug":"2026-H1","label":"2026 年上半年","start":"2026-01-01","end":"2026-06-30","cutoff":"2026-06-30","complete":true,"works":5304,"authors":3492,"active_cps":37,"version":"42f23f22ac9d"}];
