@@ -16,8 +16,8 @@
   <main class="admin-shell">
     <section class="intro">
       <p class="eyebrow">PRIVATE REVIEW DESK</p>
-      <h1>核对几条，发布几条。</h1>
-      <p>选择会自动保存；确认后再发布。</p>
+      <h1>只处理系统无法判断的 CP 冲突。</h1>
+      <p>选择最终决定后直接提交；草稿仍在待处理，云端更新完成后才显示为已生效。</p>
     </section>
 
     <section class="login-card" id="loginCard" hidden>
@@ -27,33 +27,29 @@
 
     <section id="app" hidden>
       <div class="summary-grid">
-        <button class="summary-card active" data-kind="required" type="button"><span>待确认</span><strong id="requiredCount">0</strong><small>无法自动判断</small></button>
-        <button class="summary-card" data-kind="candidate" type="button"><span>抽查候选</span><strong id="candidateCount">0</strong><small>待抽查</small></button>
-        <button class="summary-card" data-kind="risk" type="button"><span>风险提示</span><strong id="riskCount">0</strong><small>规则提醒</small></button>
-        <button class="summary-card" data-kind="history" type="button"><span>已处理</span><strong id="historyCount">—</strong><small>历史记录</small></button>
+        <button class="summary-card active" data-kind="pending" type="button"><span>待处理</span><strong id="pendingCount">0</strong><small>含未提交修改</small></button>
+        <button class="summary-card" data-kind="results" type="button"><span>处理结果</span><strong id="resultsCount">0</strong><small>已提交与已生效</small></button>
       </div>
 
       <div class="toolbar">
         <div class="tabs" role="tablist" aria-label="管理台分区">
-          <button class="tab active" data-kind="required" type="button">待确认</button>
-          <button class="tab" data-kind="candidate" type="button">抽查候选</button>
-          <button class="tab" data-kind="risk" type="button">风险提示</button>
-          <button class="tab" data-kind="history" type="button">已处理</button>
+          <button class="tab active" data-kind="pending" type="button">待处理</button>
+          <button class="tab" data-kind="results" type="button">处理结果</button>
         </div>
         <div class="toolbar-row"><label class="search"><span>搜索</span><input id="searchInput" type="search" placeholder="标题 / CP / 标签"></label><button class="secondary" id="refreshButton" type="button">刷新</button></div>
       </div>
 
       <div class="filter-strip" aria-label="筛选条件">
-        <label><span>状态</span><select id="stateFilter"><option value="">全部</option><option value="pending">未选择</option><option value="draft">已保存</option><option value="confirmed">已确认</option></select></label>
+        <label><span>状态</span><select id="stateFilter"><option value="">全部</option><option value="pending">未选择</option><option value="draft">未提交修改</option></select></label>
         <label><span>CP</span><select id="cpFilter"><option value="">全部 CP</option></select></label>
         <label><span>时间</span><select id="dateFilter"><option value="">全部时间</option></select></label>
         <button class="secondary" id="clearFilters" type="button">清除筛选</button>
-        <span class="flow-note">选 → 保存 · 确认 → 发布</span>
+        <span class="flow-note">选择决定 → 自动保存 → 提交所选</span>
       </div>
 
-      <div class="selection-bar" id="selectionBar"><span id="selectionSummary">尚未选择</span><button class="secondary" id="confirmButton" type="button" disabled>确认选中</button><button class="primary" id="publishButton" type="button" disabled>发布已确认</button></div>
+      <div class="selection-bar" id="selectionBar"><span id="selectionSummary">尚未选择</span><button class="primary" id="submitButton" type="button" disabled>提交所选</button></div>
       <section class="review-list" id="reviewList" aria-live="polite"></section>
-      <section class="history-list" id="historyList" hidden></section>
+      <section class="history-list" id="resultList" hidden></section>
     </section>
 
     <p class="global-message" id="globalMessage" role="status"></p>

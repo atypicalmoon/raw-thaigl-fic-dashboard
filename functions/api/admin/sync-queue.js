@@ -29,5 +29,15 @@ export async function onRequestPost({ request, env }) {
   // 每次同步使用新的 revision；本轮没有被更新的旧记录自然失效，
   // 不使用超长的 NOT IN 列表，避免队列变大后触发 SQLite 参数上限。
   await env.DB.prepare("UPDATE review_items SET active=0,updated_at=? WHERE source_revision<>?").bind(now, sourceRevision).run();
-  return json({ synced: seen.length, source_revision: sourceRevision, updated_at: now });
+  // 已提交的决定只有在下一轮数据中不再出现时才算真正生效。
+  const completed = await env.DB.prepare(
+    "SELECT d.item_id,d.action,d.new_cp,d.note,d.user_email FROM review_decisions d JOIN review_items i ON i.id=d.item_id WHERE d.state='submitted' AND i.active=0",
+  ).all();
+  for (const decision of completed.results || []) {
+    await env.DB.prepare("UPDATE review_decisions SET state='effective',published_at=?,updated_at=? WHERE item_id=?")
+      .bind(now, now, decision.item_id).run();
+    await env.DB.prepare("INSERT INTO review_history(item_id,event,action,new_cp,note,user_email,created_at) VALUES(?,?,?,?,?,?,?)")
+      .bind(decision.item_id, "effective", decision.action, decision.new_cp, decision.note, decision.user_email, now).run();
+  }
+  return json({ synced: seen.length, effective: (completed.results || []).length, source_revision: sourceRevision, updated_at: now });
 }

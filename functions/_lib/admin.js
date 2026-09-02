@@ -132,7 +132,7 @@ export function requireSyncToken(request, env) {
 }
 
 export function cleanAction(value) {
-  return ["keep", "exclude", "change", "defer"].includes(String(value)) ? String(value) : "";
+  return ["keep", "exclude", "change"].includes(String(value)) ? String(value) : "";
 }
 
 export function nowIso() {

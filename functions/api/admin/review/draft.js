@@ -21,8 +21,6 @@ export async function onRequestPost({ request, env }) {
       "INSERT INTO review_decisions(item_id,action,new_cp,note,state,user_email,updated_at) VALUES(?,?,?,?,?,?,?) " +
       "ON CONFLICT(item_id) DO UPDATE SET action=excluded.action,new_cp=excluded.new_cp,note=excluded.note,state='draft',user_email=excluded.user_email,updated_at=excluded.updated_at,confirmed_at=NULL,published_at=NULL",
     ).bind(itemId, action, newCp, note, "draft", identity.email, now).run();
-    await env.DB.prepare("INSERT INTO review_history(item_id,event,action,new_cp,note,user_email,created_at) VALUES(?,?,?,?,?,?,?)")
-      .bind(itemId, "draft_saved", action, newCp, note, identity.email, now).run();
     return json({ saved: true, item_id: itemId, state: "draft", updated_at: now });
   } catch (error) {
     return error instanceof Response ? error : json({ error: error.message || "草稿保存失败。" }, error.status || 500);

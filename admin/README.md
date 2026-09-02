@@ -1,6 +1,6 @@
 # 私人核对管理台
 
-管理台页面是公开仓库中的无数据壳，作品队列、草稿和操作历史只通过 Pages Functions 读取。发布前必须在 Cloudflare Access 中为 /admin/* 和 /api/admin/* 建立同一条登录策略；接口还会校验 Cf-Access-Authenticated-User-Email 是否在 ADMIN_EMAILS 中。
+管理台页面是公开仓库中的无数据壳，CP 冲突队列、草稿和处理结果只通过 Pages Functions 读取。发布前必须在 Cloudflare Access 中为 /admin/* 和 /api/admin/* 建立同一条登录策略；接口还会校验 Cf-Access-Authenticated-User-Email 是否在 ADMIN_EMAILS 中。
 
 ## Pages 绑定
 
@@ -17,4 +17,6 @@ GitHub 私有工具仓库还需要设置 REVIEW_SYNC_URL 和 REVIEW_SYNC_TOKEN S
 
 ## 使用方式
 
-打开 /admin/ 后，在“待确认、抽查候选、风险提示、已处理”之间切换。选择后会自动保存草稿；勾选若干条并点“确认选中”，最后点“发布已确认”。发布接口只写回私有仓库的 config/manual_overrides.csv，随后触发现有月度工作流，公开网页仍由原有审计链路生成。
+管理台只处理系统无法自动判断的多 CP 冲突；日期缺失、标签风险和普通重复记录不进入人工队列。
+
+打开 /admin/ 后，在“待处理”和“处理结果”之间切换。选择最终决定会自动保存为“未提交修改”，仍留在待处理；勾选后点“提交所选”即可写回私有仓库的 config/manual_overrides.csv 并触发现有月度工作流。提交后先显示“已提交”，下一轮队列同步确认冲突消失后才显示“已生效”。公开网页仍由原有审计链路生成。
