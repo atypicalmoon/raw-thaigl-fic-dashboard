@@ -2097,6 +2097,18 @@ if (window.ResizeObserver) {
 }
 
 document.getElementById("dataCutoff").innerText = window.DASHBOARD_META?.data_cutoff || "未知";
+const sourceMeta = window.DASHBOARD_META || {};
+const sourceFreshness = document.getElementById("sourceFreshness");
+if (sourceFreshness && !sourceMeta.source_status) {
+    sourceFreshness.hidden = true;
+} else if (sourceFreshness) {
+    const expectedMonth = sourceMeta.source_expected_month || "本月";
+    const lastSuccess = sourceMeta.source_last_success || "无成功快照";
+    sourceFreshness.innerText = sourceMeta.source_status === "fresh"
+        ? `抓取状态：${expectedMonth}（泰国时间）已完成，最近成功 ${lastSuccess}`
+        : `抓取状态：源站暂不可用，使用最近成功快照 ${lastSuccess}`;
+    sourceFreshness.classList.toggle("source-stale", sourceMeta.source_status !== "fresh");
+}
 window.addEventListener("pageshow", () => {
     if (selectedFocusCp) {
         syncSingleCpReportLink();
