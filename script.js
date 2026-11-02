@@ -983,7 +983,8 @@ function bindEvents() {
         };
     });
     document.addEventListener("click", event => {
-        if (window.innerWidth <= 720 || event.target.closest(".control-row")) return;
+        // 被点元素若已因重绘移出页面（如年 × 月方格），视为面板内点击，不收起。
+        if (window.innerWidth <= 720 || !event.target.isConnected || event.target.closest(".control-row")) return;
         document.querySelectorAll(".control-row").forEach(row => {
             row.classList.add("mobile-collapsed");
             row.querySelector(".mobile-filter-section-toggle")?.setAttribute("aria-expanded", "false");
@@ -1268,8 +1269,16 @@ function getFilteredRows() {
 // 连续月份写成区间（9-10月），否则逐个列出。
 function formatMonths(months) {
     const sorted = Array.from(months).map(Number).sort((a, b) => a - b);
-    const contiguous = sorted.every((m, i) => i === 0 || m === sorted[i - 1] + 1);
-    return contiguous && sorted.length > 2 ? `${sorted[0]}-${sorted[sorted.length - 1]}月` : `${sorted.join("、")}月`;
+    const parts = [];
+    for (let i = 0; i < sorted.length;) {
+        let j = i;
+        while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
+        // 连续三个及以上的月份合并为区间，如“1-8、12月”。
+        if (j - i >= 2) parts.push(`${sorted[i]}-${sorted[j]}`);
+        else parts.push(...sorted.slice(i, j + 1));
+        i = j + 1;
+    }
+    return `${parts.join("、")}月`;
 }
 
 // 月份相同的年份合并成一组（如“2019-2026：10月”），避免摘要过长。
