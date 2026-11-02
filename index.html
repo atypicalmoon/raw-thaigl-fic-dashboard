@@ -18,7 +18,7 @@
     <meta name="description" content="ReadAWrite 泰百 CP 同人作品数据看板。" />
     <title>泰百同人数据看板</title>
     <script defer src="vendor/d3.v7.min.js?v=f2094bbf6141"></script>
-    <link rel="stylesheet" href="style.css?v=d04a1dde25f2" />
+    <link rel="stylesheet" href="style.css?v=79371cd16542" />
 </head>
 <body>
     <header class="site-header">
@@ -49,7 +49,7 @@
             <div class="filter-content" id="filterContent" style="display:none;">
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>公司 / 厂牌</span><small id="mobileCompanyCount">—</small></button><span class="control-label">公司 / 厂牌</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllCompanyBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertCompanyBtn">反选</button><button class="btn-action" id="clearCompanyBtn">清空</button></div><div class="multiselect-box" id="companyCheckboxList"></div></div></div>
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>CP 选择</span><small id="mobileCpCount">—</small></button><span class="control-label">CP 选择</span><div class="control-body"><div class="btn-group"><input type="text" id="cpSearchInput" class="search-input" placeholder="搜索 CP…" /><button class="btn-action" id="selectAllCPBtn">选中可见</button><button class="btn-action mobile-secondary-action" id="invertCPBtn">反选可见</button><button class="btn-action" id="clearCPBtn">清空</button></div><div class="multiselect-box compact-group" id="cpCheckboxList"></div></div></div>
-                <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>发文年份</span><small id="mobileYearCount">—</small></button><span class="control-label">发文年份</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllYearBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertYearBtn">反选</button><button class="btn-action" id="clearYearBtn">清空</button></div><div class="multiselect-box" id="yearCheckboxList"></div><div class="month-row"><span class="helper">月份</span><select class="month-year-select" id="monthYearSelect" aria-label="选择要设置月份的年份"></select><button class="chip month-all" id="allMonthBtn" type="button">全年</button><div class="month-chips" id="monthChips"></div></div></div></div>
+                <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>发文年份</span><small id="mobileYearCount">—</small></button><span class="control-label">发文年份</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllYearBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertYearBtn">反选</button><button class="btn-action" id="clearYearBtn">清空</button></div><div class="ym-grid" id="yearMonthGrid" role="group" aria-label="按年份和月份筛选"></div><p class="ym-help helper">点格子选单月 · 点年份选整年 · 点顶部数字选每年该月 · 颜色越深作品越多</p></div></div>
                 <div class="control-row mobile-collapsed"><button class="mobile-filter-section-toggle" type="button" aria-expanded="false"><span>点赞分档</span><small id="mobileTierCount">—</small></button><span class="control-label">点赞分档</span><div class="control-body"><div class="btn-group"><button class="btn-action" id="selectAllTierBtn">全选</button><button class="btn-action mobile-secondary-action" id="invertTierBtn">反选</button><button class="btn-action" id="clearTierBtn">清空</button><span class="mobile-line-break"></span><span class="helper">精确区间</span><input type="number" id="customLikeMin" class="search-input small" placeholder="最小" /><span>-</span><input type="number" id="customLikeMax" class="search-input small" placeholder="最大" /></div><div class="btn-group" id="tierChips"></div></div></div>
                 <div class="filter-footer"><span class="helper">仅展示收录的有效作品</span><button class="btn-action" id="resetBtn">重置全部筛选</button></div>
                 <div class="mobile-filter-actions"><button class="btn-action" id="mobileResetBtn" type="button">重置筛选</button><button class="primary-button" id="mobileCollapseFilterBtn" type="button">收起筛选（<span id="mobileFilterResultCount">—</span> 篇）</button></div>
@@ -122,6 +122,6 @@
     </dialog>
     <div class="tooltip" id="tooltip"></div>
     <script defer src="cp_catalog.js?v=e14997d4f72d"></script>
-    <script defer src="script.js?v=5078678086ee"></script>
+    <script defer src="script.js?v=a1028da67d1f"></script>
 </body>
 </html>

@@ -610,8 +610,7 @@ function initDashboard() {
 
     renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
     renderCpCheckboxes();
-    renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
-    renderMonthRow(true);
+    renderYearMonthGrid();
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
     document.getElementById("customLikeMin").value = state.customLikeMin ?? "";
     document.getElementById("customLikeMax").value = state.customLikeMax ?? "";
@@ -844,43 +843,70 @@ function setYearMonths(year, months) {
     }
 }
 
-// 年份勾选框：全年为勾选，只选部分月份为半选。
-function syncYearCheckboxes() {
-    d3.selectAll("#yearCheckboxList input[type=checkbox]").each(function() {
-        this.checked = state.years.has(this.value);
-        this.indeterminate = state.years.has(this.value) && state.yearMonths.has(this.value);
-    });
+function toggleMonthOf(year, month) {
+    const next = new Set(selectedMonthsOf(year));
+    if (next.has(month)) next.delete(month);
+    else next.add(month);
+    setYearMonths(year, next);
 }
 
-function renderMonthRow(resetYear = false) {
-    const select = document.getElementById("monthYearSelect");
+// 年 × 月方格：点格子切换该月，点年份切换整年，点月份数字切换每年的该月。
+function renderYearMonthGrid() {
     const years = getAvailableYears().sort().reverse();
-    const current = !resetYear && years.includes(select.value) ? select.value : years[0];
-    select.innerHTML = "";
-    years.forEach(year => select.add(new Option(year + (state.yearMonths.has(year) ? " ·" : ""), year)));
-    select.value = current || "";
-    const selected = selectedMonthsOf(current);
-    const options = getYearMonthOptions(current);
-    document.getElementById("allMonthBtn").classList.toggle("active", state.years.has(current) && !state.yearMonths.has(current));
-    const el = d3.select("#monthChips").html("");
-    options.forEach(month => {
-        el.append("button").attr("type", "button").attr("class", "chip" + (selected.has(month) ? " active" : ""))
-            .text(`${month}月`)
+    const counts = new Map();
+    dataAfterStatus.forEach(d => {
+        if (!d.year || !d.month) return;
+        const key = `${d.year}-${d.month}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    const maxCount = Math.max(1, ...counts.values());
+    const months = Array.from({ length: 12 }, (_, i) => String(i + 1));
+    const grid = d3.select("#yearMonthGrid").html("");
+    const refresh = () => { renderYearMonthGrid(); update(); };
+
+    grid.append("span").attr("class", "ym-corner");
+    months.forEach(month => {
+        const withData = years.filter(year => counts.has(`${year}-${month}`));
+        grid.append("button").attr("type", "button").attr("class", "ym-head")
+            .attr("title", `每年的 ${month} 月`).text(month)
             .on("click", () => {
-                const isFullYear = state.years.has(current) && !state.yearMonths.has(current);
-                // 全年（或未选该年）时点某月 = 只看这个月，之后逐个增减。
-                let next;
-                if (isFullYear || !state.years.has(current)) next = new Set([month]);
-                else {
-                    next = new Set(selected);
-                    if (next.has(month)) next.delete(month);
+                const allOn = withData.length && withData.every(year => selectedMonthsOf(year).has(month));
+                withData.forEach(year => {
+                    const next = new Set(selectedMonthsOf(year));
+                    if (allOn) next.delete(month);
                     else next.add(month);
-                }
-                setYearMonths(current, next);
-                syncYearCheckboxes();
-                renderMonthRow();
-                update();
+                    setYearMonths(year, next);
+                });
+                refresh();
             });
+    });
+
+    years.forEach(year => {
+        const full = state.years.has(year) && !state.yearMonths.has(year);
+        grid.append("button").attr("type", "button")
+            .attr("class", "ym-year" + (full ? " full" : state.years.has(year) ? " partial" : ""))
+            .attr("title", full ? `取消 ${year} 年` : `选择 ${year} 全年`).text(year)
+            .on("click", () => {
+                setYearMonths(year, full ? new Set() : new Set(getYearMonthOptions(year)));
+                refresh();
+            });
+        const selected = selectedMonthsOf(year);
+        months.forEach(month => {
+            const count = counts.get(`${year}-${month}`) || 0;
+            const cell = grid.append("button").attr("type", "button");
+            if (!count) {
+                cell.attr("class", "ym-cell empty").attr("disabled", true).attr("aria-label", `${year}年${month}月 无作品`);
+                return;
+            }
+            const on = selected.has(month);
+            cell.attr("class", "ym-cell" + (on ? " on" : ""))
+                .attr("title", `${year}年${month}月 · ${count.toLocaleString()} 篇`)
+                .attr("aria-label", `${year}年${month}月 ${count} 篇，${on ? "已选" : "未选"}`)
+                .attr("aria-pressed", String(on))
+                // 柔和浅粉渐变：作品越多颜色越深。
+                .style("background", on ? d3.interpolateRgb("#fbe6ef", "#d77aa8")(Math.sqrt(count / maxCount)) : null)
+                .on("click", () => { toggleMonthOf(year, month); refresh(); });
+        });
     });
 }
 
@@ -1094,27 +1120,21 @@ function bindEvents() {
     };
 
     document.getElementById("selectAllYearBtn").onclick = () => {
-        replaceSetContents(state.years, Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean));
-        d3.selectAll("#yearCheckboxList input[type=checkbox]").property("checked", true);
+        replaceSetContents(state.years, getAvailableYears());
+        state.yearMonths.clear();
         update();
     };
-    document.getElementById("allMonthBtn").onclick = () => {
-        const year = document.getElementById("monthYearSelect").value;
-        setYearMonths(year, new Set(getYearMonthOptions(year)));
-        syncYearCheckboxes();
-        renderMonthRow();
-        update();
-    };
-    document.getElementById("monthYearSelect").onchange = () => renderMonthRow();
     document.getElementById("clearYearBtn").onclick = () => {
-        d3.selectAll("#yearCheckboxList input[type=checkbox]").property("checked", false);
-        state.years.clear(); update();
+        state.years.clear();
+        state.yearMonths.clear();
+        update();
     };
+    // 按格子反选：已选的月份取消，未选的月份选中。
     document.getElementById("invertYearBtn").onclick = () => {
-        const allYears = Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean);
-        invertSetFromValues(state.years, allYears);
-        d3.selectAll("#yearCheckboxList input[type=checkbox]")
-            .property("checked", function() { return state.years.has(this.value); });
+        getAvailableYears().forEach(year => {
+            const selected = selectedMonthsOf(year);
+            setYearMonths(year, new Set(getYearMonthOptions(year).filter(month => !selected.has(month))));
+        });
         update();
     };
 
@@ -1224,8 +1244,7 @@ function bindEvents() {
         applyStatusFilter();
         renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
         renderCpCheckboxes();
-        renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
-        renderMonthRow(true);
+        renderYearMonthGrid();
         renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
         update();
     };
@@ -1253,9 +1272,19 @@ function formatMonths(months) {
     return contiguous && sorted.length > 2 ? `${sorted[0]}-${sorted[sorted.length - 1]}月` : `${sorted.join("、")}月`;
 }
 
+// 月份相同的年份合并成一组（如“2019-2026：10月”），避免摘要过长。
 function formatPartialYears() {
-    return Array.from(state.yearMonths).sort(([a], [b]) => a.localeCompare(b))
-        .map(([year, months]) => `${year}：${formatMonths(months)}`);
+    const groups = new Map();
+    Array.from(state.yearMonths).sort(([a], [b]) => a.localeCompare(b)).forEach(([year, months]) => {
+        const label = formatMonths(months);
+        if (!groups.has(label)) groups.set(label, []);
+        groups.get(label).push(Number(year));
+    });
+    return Array.from(groups, ([label, years]) => {
+        const contiguous = years.every((y, i) => i === 0 || y === years[i - 1] + 1);
+        const yearText = contiguous && years.length > 2 ? `${years[0]}-${years[years.length - 1]}` : years.join("、");
+        return `${yearText}：${label}`;
+    });
 }
 
 function updateKPIs(rows) {
@@ -1310,8 +1339,7 @@ function update() {
 function updateNow() {
     // 取消勾选的年份不保留月份选择，重新勾选时按全年处理。
     Array.from(state.yearMonths.keys()).forEach(year => { if (!state.years.has(year)) state.yearMonths.delete(year); });
-    syncYearCheckboxes();
-    renderMonthRow();
+    renderYearMonthGrid();
     const rows = getFilteredRows();
     const generation = ++deferredRenderGeneration;
     persistFilterState();
