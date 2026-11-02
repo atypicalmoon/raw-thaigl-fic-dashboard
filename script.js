@@ -130,6 +130,8 @@ const REVIEW_MODE = new URLSearchParams(window.location.search).get("review") ==
 let reviewQueue = [];
 let activeReviewArticle = null;
 
+const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+
 function getAvailableYears() {
     return Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean);
 }
@@ -149,6 +151,7 @@ function restoreFilterState() {
         setFromSavedValues(state.companies, saved.companies, companies, saved.allCompanies);
         setFromSavedValues(state.cps, saved.cps, cps, saved.allCps);
         setFromSavedValues(state.years, saved.years, years, saved.allYears);
+        setFromSavedValues(state.months, saved.months, MONTHS, saved.allMonths ?? !Array.isArray(saved.months));
         setFromSavedValues(state.tiers, saved.tiers, TIER_ORDER, saved.allTiers);
         state.customLikeMin = Number.isFinite(saved.customLikeMin) ? saved.customLikeMin : null;
         state.customLikeMax = Number.isFinite(saved.customLikeMax) ? saved.customLikeMax : null;
@@ -165,6 +168,7 @@ function persistFilterState() {
             companies: Array.from(state.companies), allCompanies: state.companies.size === companies.length,
             cps: Array.from(state.cps), allCps: state.cps.size === cps.length,
             years: Array.from(state.years), allYears: state.years.size === years.length,
+            months: Array.from(state.months), allMonths: state.months.size === MONTHS.length,
             tiers: Array.from(state.tiers), allTiers: state.tiers.size === TIER_ORDER.length,
             customLikeMin: state.customLikeMin,
             customLikeMax: state.customLikeMax,
@@ -343,6 +347,7 @@ let state = {
     cps: new Set(),
     companies: new Set(),
     years: new Set(),
+    months: new Set(MONTHS),
     tiers: new Set(TIER_ORDER),
     customLikeMin: null,
     customLikeMax: null,
@@ -517,6 +522,7 @@ function parseCSVText(text) {
             publish_date_obj: validDate ? pDate : null,
             publish_date_str: d.publish_date || "未知",
             year: validDate ? String(pDate.getFullYear()) : null,
+            month: validDate ? String(pDate.getMonth() + 1) : null,
             month_year: validDate ? `${pDate.getFullYear()}-${String(pDate.getMonth()+1).padStart(2,"0")}` : null,
             likes,
             tier: likeTier(likes),
@@ -594,6 +600,7 @@ function initDashboard() {
     renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
     renderCpCheckboxes();
     renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
+    renderMonthChips();
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
     document.getElementById("customLikeMin").value = state.customLikeMin ?? "";
     document.getElementById("customLikeMax").value = state.customLikeMax ?? "";
@@ -809,16 +816,24 @@ function launchLenaMiuEasterEgg(cp) {
     });
 }
 
-function renderChips(containerId, items, selectedSet, kind) {
+function renderMonthChips() {
+    renderChips("monthChips", MONTHS, state.months, "chip", month => `${month}月`);
+    document.getElementById("allMonthBtn").classList.toggle("active", state.months.size === MONTHS.length);
+}
+
+function renderChips(containerId, items, selectedSet, kind, labelFor = item => item) {
     const el = d3.select("#" + containerId).html("");
     items.forEach(item => {
         if (kind === "chip") {
             el.append("div").attr("class", "chip" + (selectedSet.has(item) ? " active" : ""))
-                .text(item)
+                .text(labelFor(item))
                 .on("click", function() {
-                    if (selectedSet.has(item)) selectedSet.delete(item);
+                    // 月份默认全选：此时点某个月表示“只看这个月”，之后再逐个增减。
+                    if (containerId === "monthChips" && selectedSet.size === items.length) replaceSetContents(selectedSet, [item]);
+                    else if (selectedSet.has(item)) selectedSet.delete(item);
                     else selectedSet.add(item);
                     d3.select(this).classed("active", selectedSet.has(item));
+                    if (containerId === "monthChips") renderMonthChips();
                     update();
                 });
             return;
@@ -1023,6 +1038,11 @@ function bindEvents() {
         d3.selectAll("#yearCheckboxList input[type=checkbox]").property("checked", true);
         update();
     };
+    document.getElementById("allMonthBtn").onclick = () => {
+        replaceSetContents(state.months, MONTHS);
+        renderMonthChips();
+        update();
+    };
     document.getElementById("clearYearBtn").onclick = () => {
         d3.selectAll("#yearCheckboxList input[type=checkbox]").property("checked", false);
         state.years.clear(); update();
@@ -1126,6 +1146,7 @@ function bindEvents() {
         replaceSetContents(state.companies, companyToCps.keys());
         replaceSetContents(state.cps, cpColor.domain());
         replaceSetContents(state.years, Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean));
+        replaceSetContents(state.months, MONTHS);
         replaceSetContents(state.tiers, TIER_ORDER);
         state.customLikeMin = null; state.customLikeMax = null;
         tableSearchQuery = "";
@@ -1141,6 +1162,7 @@ function bindEvents() {
         renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
         renderCpCheckboxes();
         renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
+        renderMonthChips();
         renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
         update();
     };
@@ -1152,11 +1174,21 @@ function getFilteredRows() {
         if (!state.companies.has(d.company)) return false;
         // 选择具体年份时，无日期/无法解析年份的记录也必须排除。
         if (!state.years.has(d.year)) return false;
+        if (!state.months.has(d.month)) return false;
         if (!state.tiers.has(d.tier)) return false;
         if (state.customLikeMin !== null && d.likes < state.customLikeMin) return false;
         if (state.customLikeMax !== null && d.likes > state.customLikeMax) return false;
         return true;
     });
+}
+
+// 全年时不额外显示；连续月份写成区间（9-10月），否则逐个列出。
+function formatMonthSelection() {
+    if (state.months.size === MONTHS.length) return "";
+    if (!state.months.size) return "未选月份";
+    const months = Array.from(state.months).map(Number).sort((a, b) => a - b);
+    const contiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
+    return contiguous && months.length > 2 ? `${months[0]}-${months[months.length - 1]}月` : `${months.join("、")}月`;
 }
 
 function updateKPIs(rows) {
@@ -1173,6 +1205,7 @@ function updateKPIs(rows) {
     const allYearCount = new Set(allParsedRows.map(d => d.year).filter(Boolean)).size;
     const hasActiveFilter = state.companies.size !== companyToCps.size ||
         state.cps.size !== dictionaryTotal || state.years.size !== allYearCount ||
+        state.months.size !== MONTHS.length ||
         state.tiers.size !== TIER_ORDER.length ||
         state.customLikeMin !== null || state.customLikeMax !== null;
     document.getElementById("kpiTotalArticles").innerText = totalArticles.toLocaleString();
@@ -1191,12 +1224,13 @@ function updateKPIs(rows) {
     const cpText = `${state.cps.size} 个 CP`;
     const years = Array.from(state.years).sort();
     const yearText = years.length ? (years.length <= 3 ? years.join("、") : `${years[0]}-${years[years.length - 1]}`) : "未选年份";
+    const monthText = formatMonthSelection();
     const likeText = state.customLikeMin !== null || state.customLikeMax !== null ?
         `点赞 ${state.customLikeMin ?? 0}-${state.customLikeMax ?? "∞"}` : `${state.tiers.size} 个点赞档`;
-    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText} · ${likeText} · 命中 ${totalArticles.toLocaleString()} 条）`;
+    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText}${monthText ? " " + monthText : ""} · ${likeText} · 命中 ${totalArticles.toLocaleString()} 条）`;
     document.getElementById("mobileCompanyCount").innerText = `${state.companies.size} 个已选`;
     document.getElementById("mobileCpCount").innerText = `${state.cps.size} 个已选`;
-    document.getElementById("mobileYearCount").innerText = `${state.years.size} 个已选`;
+    document.getElementById("mobileYearCount").innerText = `${state.years.size} 年${monthText ? " · " + monthText : ""}`;
     document.getElementById("mobileTierCount").innerText = state.customLikeMin !== null || state.customLikeMax !== null ? "使用精确区间" : `${state.tiers.size} 个已选`;
     document.getElementById("mobileFilterResultCount").innerText = totalArticles.toLocaleString();
 }
