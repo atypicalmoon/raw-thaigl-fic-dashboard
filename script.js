@@ -130,7 +130,11 @@ const REVIEW_MODE = new URLSearchParams(window.location.search).get("review") ==
 let reviewQueue = [];
 let activeReviewArticle = null;
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+// 每个年份有作品的月份（升序），供“按年份选月份”使用。
+function getYearMonthOptions(year) {
+    return Array.from(new Set(allParsedRows.filter(d => d.year === year).map(d => d.month)))
+        .filter(Boolean).sort((a, b) => a - b);
+}
 
 function getAvailableYears() {
     return Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean);
@@ -151,7 +155,13 @@ function restoreFilterState() {
         setFromSavedValues(state.companies, saved.companies, companies, saved.allCompanies);
         setFromSavedValues(state.cps, saved.cps, cps, saved.allCps);
         setFromSavedValues(state.years, saved.years, years, saved.allYears);
-        setFromSavedValues(state.months, saved.months, MONTHS, saved.allMonths ?? !Array.isArray(saved.months));
+        state.yearMonths.clear();
+        Object.entries(saved.yearMonths || {}).forEach(([year, months]) => {
+            if (!state.years.has(year) || !Array.isArray(months)) return;
+            const options = getYearMonthOptions(year);
+            const picked = months.filter(month => options.includes(month));
+            if (picked.length && picked.length < options.length) state.yearMonths.set(year, new Set(picked));
+        });
         setFromSavedValues(state.tiers, saved.tiers, TIER_ORDER, saved.allTiers);
         state.customLikeMin = Number.isFinite(saved.customLikeMin) ? saved.customLikeMin : null;
         state.customLikeMax = Number.isFinite(saved.customLikeMax) ? saved.customLikeMax : null;
@@ -168,7 +178,7 @@ function persistFilterState() {
             companies: Array.from(state.companies), allCompanies: state.companies.size === companies.length,
             cps: Array.from(state.cps), allCps: state.cps.size === cps.length,
             years: Array.from(state.years), allYears: state.years.size === years.length,
-            months: Array.from(state.months), allMonths: state.months.size === MONTHS.length,
+            yearMonths: Object.fromEntries(Array.from(state.yearMonths, ([year, months]) => [year, Array.from(months)])),
             tiers: Array.from(state.tiers), allTiers: state.tiers.size === TIER_ORDER.length,
             customLikeMin: state.customLikeMin,
             customLikeMax: state.customLikeMax,
@@ -347,7 +357,8 @@ let state = {
     cps: new Set(),
     companies: new Set(),
     years: new Set(),
-    months: new Set(MONTHS),
+    // 只记录“部分月份”的年份；已选年份不在这里即表示全年。
+    yearMonths: new Map(),
     tiers: new Set(TIER_ORDER),
     customLikeMin: null,
     customLikeMax: null,
@@ -600,7 +611,7 @@ function initDashboard() {
     renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
     renderCpCheckboxes();
     renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
-    renderMonthChips();
+    renderMonthRow(true);
     renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
     document.getElementById("customLikeMin").value = state.customLikeMin ?? "";
     document.getElementById("customLikeMax").value = state.customLikeMax ?? "";
@@ -816,24 +827,73 @@ function launchLenaMiuEasterEgg(cp) {
     });
 }
 
-function renderMonthChips() {
-    renderChips("monthChips", MONTHS, state.months, "chip", month => `${month}月`);
-    document.getElementById("allMonthBtn").classList.toggle("active", state.months.size === MONTHS.length);
+function selectedMonthsOf(year) {
+    if (!state.years.has(year)) return new Set();
+    return state.yearMonths.get(year) || new Set(getYearMonthOptions(year));
 }
 
-function renderChips(containerId, items, selectedSet, kind, labelFor = item => item) {
+function setYearMonths(year, months) {
+    const options = getYearMonthOptions(year);
+    if (!months.size) {
+        state.years.delete(year);
+        state.yearMonths.delete(year);
+    } else {
+        state.years.add(year);
+        if (months.size >= options.length) state.yearMonths.delete(year);
+        else state.yearMonths.set(year, months);
+    }
+}
+
+// 年份勾选框：全年为勾选，只选部分月份为半选。
+function syncYearCheckboxes() {
+    d3.selectAll("#yearCheckboxList input[type=checkbox]").each(function() {
+        this.checked = state.years.has(this.value);
+        this.indeterminate = state.years.has(this.value) && state.yearMonths.has(this.value);
+    });
+}
+
+function renderMonthRow(resetYear = false) {
+    const select = document.getElementById("monthYearSelect");
+    const years = getAvailableYears().sort().reverse();
+    const current = !resetYear && years.includes(select.value) ? select.value : years[0];
+    select.innerHTML = "";
+    years.forEach(year => select.add(new Option(year + (state.yearMonths.has(year) ? " ·" : ""), year)));
+    select.value = current || "";
+    const selected = selectedMonthsOf(current);
+    const options = getYearMonthOptions(current);
+    document.getElementById("allMonthBtn").classList.toggle("active", state.years.has(current) && !state.yearMonths.has(current));
+    const el = d3.select("#monthChips").html("");
+    options.forEach(month => {
+        el.append("button").attr("type", "button").attr("class", "chip" + (selected.has(month) ? " active" : ""))
+            .text(`${month}月`)
+            .on("click", () => {
+                const isFullYear = state.years.has(current) && !state.yearMonths.has(current);
+                // 全年（或未选该年）时点某月 = 只看这个月，之后逐个增减。
+                let next;
+                if (isFullYear || !state.years.has(current)) next = new Set([month]);
+                else {
+                    next = new Set(selected);
+                    if (next.has(month)) next.delete(month);
+                    else next.add(month);
+                }
+                setYearMonths(current, next);
+                syncYearCheckboxes();
+                renderMonthRow();
+                update();
+            });
+    });
+}
+
+function renderChips(containerId, items, selectedSet, kind) {
     const el = d3.select("#" + containerId).html("");
     items.forEach(item => {
         if (kind === "chip") {
             el.append("div").attr("class", "chip" + (selectedSet.has(item) ? " active" : ""))
-                .text(labelFor(item))
+                .text(item)
                 .on("click", function() {
-                    // 月份默认全选：此时点某个月表示“只看这个月”，之后再逐个增减。
-                    if (containerId === "monthChips" && selectedSet.size === items.length) replaceSetContents(selectedSet, [item]);
-                    else if (selectedSet.has(item)) selectedSet.delete(item);
+                    if (selectedSet.has(item)) selectedSet.delete(item);
                     else selectedSet.add(item);
                     d3.select(this).classed("active", selectedSet.has(item));
-                    if (containerId === "monthChips") renderMonthChips();
                     update();
                 });
             return;
@@ -1039,10 +1099,13 @@ function bindEvents() {
         update();
     };
     document.getElementById("allMonthBtn").onclick = () => {
-        replaceSetContents(state.months, MONTHS);
-        renderMonthChips();
+        const year = document.getElementById("monthYearSelect").value;
+        setYearMonths(year, new Set(getYearMonthOptions(year)));
+        syncYearCheckboxes();
+        renderMonthRow();
         update();
     };
+    document.getElementById("monthYearSelect").onchange = () => renderMonthRow();
     document.getElementById("clearYearBtn").onclick = () => {
         d3.selectAll("#yearCheckboxList input[type=checkbox]").property("checked", false);
         state.years.clear(); update();
@@ -1146,7 +1209,7 @@ function bindEvents() {
         replaceSetContents(state.companies, companyToCps.keys());
         replaceSetContents(state.cps, cpColor.domain());
         replaceSetContents(state.years, Array.from(new Set(allParsedRows.map(d => d.year))).filter(Boolean));
-        replaceSetContents(state.months, MONTHS);
+        state.yearMonths.clear();
         replaceSetContents(state.tiers, TIER_ORDER);
         state.customLikeMin = null; state.customLikeMax = null;
         tableSearchQuery = "";
@@ -1162,7 +1225,7 @@ function bindEvents() {
         renderChips("companyCheckboxList", Array.from(state.companies).sort(), state.companies, "plain");
         renderCpCheckboxes();
         renderChips("yearCheckboxList", Array.from(state.years).sort(), state.years, "plain");
-        renderMonthChips();
+        renderMonthRow(true);
         renderChips("tierChips", TIER_ORDER, state.tiers, "chip");
         update();
     };
@@ -1174,7 +1237,8 @@ function getFilteredRows() {
         if (!state.companies.has(d.company)) return false;
         // 选择具体年份时，无日期/无法解析年份的记录也必须排除。
         if (!state.years.has(d.year)) return false;
-        if (!state.months.has(d.month)) return false;
+        const months = state.yearMonths.get(d.year);
+        if (months && !months.has(d.month)) return false;
         if (!state.tiers.has(d.tier)) return false;
         if (state.customLikeMin !== null && d.likes < state.customLikeMin) return false;
         if (state.customLikeMax !== null && d.likes > state.customLikeMax) return false;
@@ -1182,13 +1246,16 @@ function getFilteredRows() {
     });
 }
 
-// 全年时不额外显示；连续月份写成区间（9-10月），否则逐个列出。
-function formatMonthSelection() {
-    if (state.months.size === MONTHS.length) return "";
-    if (!state.months.size) return "未选月份";
-    const months = Array.from(state.months).map(Number).sort((a, b) => a - b);
-    const contiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
-    return contiguous && months.length > 2 ? `${months[0]}-${months[months.length - 1]}月` : `${months.join("、")}月`;
+// 连续月份写成区间（9-10月），否则逐个列出。
+function formatMonths(months) {
+    const sorted = Array.from(months).map(Number).sort((a, b) => a - b);
+    const contiguous = sorted.every((m, i) => i === 0 || m === sorted[i - 1] + 1);
+    return contiguous && sorted.length > 2 ? `${sorted[0]}-${sorted[sorted.length - 1]}月` : `${sorted.join("、")}月`;
+}
+
+function formatPartialYears() {
+    return Array.from(state.yearMonths).sort(([a], [b]) => a.localeCompare(b))
+        .map(([year, months]) => `${year}：${formatMonths(months)}`);
 }
 
 function updateKPIs(rows) {
@@ -1205,7 +1272,7 @@ function updateKPIs(rows) {
     const allYearCount = new Set(allParsedRows.map(d => d.year).filter(Boolean)).size;
     const hasActiveFilter = state.companies.size !== companyToCps.size ||
         state.cps.size !== dictionaryTotal || state.years.size !== allYearCount ||
-        state.months.size !== MONTHS.length ||
+        state.yearMonths.size > 0 ||
         state.tiers.size !== TIER_ORDER.length ||
         state.customLikeMin !== null || state.customLikeMax !== null;
     document.getElementById("kpiTotalArticles").innerText = totalArticles.toLocaleString();
@@ -1224,13 +1291,13 @@ function updateKPIs(rows) {
     const cpText = `${state.cps.size} 个 CP`;
     const years = Array.from(state.years).sort();
     const yearText = years.length ? (years.length <= 3 ? years.join("、") : `${years[0]}-${years[years.length - 1]}`) : "未选年份";
-    const monthText = formatMonthSelection();
+    const partialYears = formatPartialYears();
     const likeText = state.customLikeMin !== null || state.customLikeMax !== null ?
         `点赞 ${state.customLikeMin ?? 0}-${state.customLikeMax ?? "∞"}` : `${state.tiers.size} 个点赞档`;
-    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText}${monthText ? " " + monthText : ""} · ${likeText} · 命中 ${totalArticles.toLocaleString()} 条）`;
+    document.getElementById("filterSummaryText").innerText = `（${companyText} · ${cpText} · ${yearText}${partialYears.length ? `（${partialYears.join("；")}）` : ""} · ${likeText} · 命中 ${totalArticles.toLocaleString()} 条）`;
     document.getElementById("mobileCompanyCount").innerText = `${state.companies.size} 个已选`;
     document.getElementById("mobileCpCount").innerText = `${state.cps.size} 个已选`;
-    document.getElementById("mobileYearCount").innerText = `${state.years.size} 年${monthText ? " · " + monthText : ""}`;
+    document.getElementById("mobileYearCount").innerText = `${state.years.size} 年${partialYears.length ? ` · ${partialYears.length} 年按月` : ""}`;
     document.getElementById("mobileTierCount").innerText = state.customLikeMin !== null || state.customLikeMax !== null ? "使用精确区间" : `${state.tiers.size} 个已选`;
     document.getElementById("mobileFilterResultCount").innerText = totalArticles.toLocaleString();
 }
@@ -1241,6 +1308,10 @@ function update() {
 }
 
 function updateNow() {
+    // 取消勾选的年份不保留月份选择，重新勾选时按全年处理。
+    Array.from(state.yearMonths.keys()).forEach(year => { if (!state.years.has(year)) state.yearMonths.delete(year); });
+    syncYearCheckboxes();
+    renderMonthRow();
     const rows = getFilteredRows();
     const generation = ++deferredRenderGeneration;
     persistFilterState();
